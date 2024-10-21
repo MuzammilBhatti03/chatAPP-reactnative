@@ -160,7 +160,7 @@ import {
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import io from "socket.io-client";
 import { useNavigation } from "@react-navigation/native";
-
+import { ipurl } from "../constants/constant";
 // const data = [
 //   {
 //     id: "1",
@@ -198,96 +198,111 @@ import { useNavigation } from "@react-navigation/native";
 //   },
 // ];
 
-const socket = io("http://192.168.0.110:4200"); // Adjust to your server
+const socket = io(ipurl); // Adjust to your server
 
 const TopicsScreen = ({ route }) => {
-  const { userN,userarr} = route.params;
+  const { userN, userarr } = route.params;
   const [search, setSearch] = useState("");
   const navigation = useNavigation();
   const [selectedView, setSelectedView] = useState("forums");
   const [connectedUsers, setConnectedUsers] = useState(userarr);
 
+  const [data, setdata] = useState([]);
+  async function fetchForumData() {
+    try {
+      // Call the API to get the forum data
+      const response = await fetch(`${ipurl}/api/forums`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
-  const [data,setdata]=useState([]);
-async function fetchForumData() {
-  try {
-    // Call the API to get the forum data
-    const response = await fetch("http://192.168.0.110:4200/api/forums", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+      // Check if the response is OK
+      if (!response.ok) {
+        throw new Error("Failed to fetch forum data");
+      }
 
-    // Check if the response is OK
-    if (!response.ok) {
-      throw new Error("Failed to fetch forum data");
+      // Parse the response JSON data
+      const forumData = await response.json();
+
+      // Add the fetched data to the `data` array
+      setdata(forumData); // Spread the existing data and new data
+      // console.log("Forum data successfully added:", data);
+    } catch (error) {
+      console.error("Error fetching forum data:", error.message);
     }
-
-    // Parse the response JSON data
-    const forumData = await response.json();
-
-    // Add the fetched data to the `data` array
-    setdata(forumData); // Spread the existing data and new data
-    console.log("Forum data successfully added:", data);
-  } catch (error) {
-    console.error("Error fetching forum data:", error.message);
   }
-}
   const connecteduser = () => {
     console.log("Selected view changed to users");
     setSelectedView("users");
+  
+    // Emit 'fetch users' to request the list of users from the server
+    socket.emit("fetch users");
+  
+    // Listen for the updated users list from the server
+    socket.on("users", (users) => {
+      console.log("Connected users received are:", users); // Log the users received
+      if (users == null || users.length === 0) {
+        console.log("No users connected");
+      } else {
+        const validUsers = users.filter(
+          (user) => user.userID && user.username !== userN // Exclude the current user
+        );
+        console.log("Valid connected users:", validUsers); // Log valid users
+        setConnectedUsers(validUsers); // Update state with valid users
+      }
+    });
   };
+  
 
   // Fetch connected users when "Connected Users" is selected
   useEffect(() => {
-    fetchForumData();
-    console.log("useEffect triggered with selectedView:", selectedView); // Log for debugging
-    if (selectedView === "users") {
-      console.log("Listening for connected users..."); // Log for debugging
-  
+    if (selectedView === "forums") {
+      fetchForumData();
+    }
+    // console.log("useEffect triggered with selectedView:", selectedView); // Log for debugging
+    if (selectedView == "users") {
+      // console.log("Requesting connected users from server..."); // Log for debugging
+      // Emit the event to fetch users
+      socket.emit("fetch users");
+      // Listen for the updated users list
       socket.on("users", (users) => {
-        console.log("Connected users in socket:", users); // Log the users received
+        console.log("Connected users received:", users); // Log the users received
         if (users == null || users.length === 0) {
           console.log("No users connected");
         } else {
-          // Filter to ensure all have userID and exclude the current user
-          console.log("user in getting users ",userN);
-          
-          const validUsers = users.filter(user => 
-            user.userID && user.username !== userN // Exclude the current user
-          ); 
-          console.log("Valid connected users:", validUsers); // Log valid users
+          const validUsers = users.filter(
+            (user) => user.userID && user.username !== userN // Exclude the current user
+          );
+          // console.log("Valid connected users:", validUsers); // Log valid users
           setConnectedUsers(validUsers); // Update state with valid users
         }
       });
-      socket.on("user connected", (user) => {
-        setConnectedUsers([...connectedUsers, user]);
-      });
-  
+
+      // Clean up the event listener on unmount
       return () => {
-        console.log("Cleaning up users listener"); // Log for debugging
+        console.log("Cleaning up 'users' listener"); // Log for debugging
         socket.off("users");
       };
     }
   }, [selectedView]);
-  
-  
+
   // Renders the forum list
   const renderForumItem = ({ item }) => (
     <TouchableOpacity
       style={styles.itemContainer}
       onPress={() =>
         navigation.navigate("Chat", {
-          name: userN,
+          username: userN,
           imgurl: item.image,
           topic: item.title,
           description: item.description,
-          forumid:item._id,
+          forumid: item._id,
         })
       }
     >
-      <Image source={{uri:item.image}} style={styles.itemImage} />
+      <Image source={{ uri: item.image }} style={styles.itemImage} />
       <View style={styles.textContainer}>
         <Text style={styles.title}>{item.title}</Text>
         <Text style={styles.description}>{item.description}</Text>

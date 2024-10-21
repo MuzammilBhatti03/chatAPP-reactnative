@@ -114,16 +114,15 @@ import { View, Text, Image, TextInput, TouchableOpacity } from "react-native";
 import React, { useState } from "react";
 import { useNavigation } from '@react-navigation/native';
 import io from 'socket.io-client';
-
+import { ipurl } from "../constants/constant";
 const Login = () => {
   const [name, setName] = useState("");
   const navigation = useNavigation(); // Get navigation object
   const [connectedUsers,setConnectedUsers]=useState([]);
-
   const handleSubmit = async() => {
     if (name.trim()) {
       // Connect to the socket server with the username
-      const socket = io('http://192.168.0.110:4200', {
+      const socket = io(ipurl, {
         auth: {
           fetched_userName: name, // Send the username to the server in the auth payload
         },

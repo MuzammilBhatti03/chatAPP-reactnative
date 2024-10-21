@@ -25,7 +25,8 @@ export default function App() {
           component={Home} 
           options={{ title: 'Home',
             headerStyle:{backgroundColor: '#333B56',color: "white"},
-            headerTintColor: "white"
+            headerTintColor: "white",
+            headerShown: false
            }} 
         />
         <Stack.Screen 

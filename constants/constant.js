@@ -1,0 +1,1 @@
+export const ipurl = 'http://192.168.0.108:4200';
