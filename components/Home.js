@@ -159,58 +159,23 @@ import {
 } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import io from "socket.io-client";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
 import { ipurl } from "../constants/constant";
-// const data = [
-//   {
-//     id: "1",
-//     title: "Covid19",
-//     description: "Trends, precautionary measures, and vaccine information",
-//     image: require("../assets/messagelogo.png"),
-//   },
-//   {
-//     id: "2",
-//     title: "Netflix Dark",
-//     description:
-//       "Lorem ipsum mollit non deserunt ullamco est sit aliqua dolor do",
-//     image: require("../assets/messagelogo.png"),
-//   },
-//   {
-//     id: "3",
-//     title: "IPL 2020",
-//     description:
-//       "Lorem ipsum mollit non deserunt ullamco est sit aliqua dolor do",
-//     image: require("../assets/messagelogo.png"),
-//   },
-//   {
-//     id: "4",
-//     title: "Black Lives Matter",
-//     description:
-//       "Lorem ipsum mollit non deserunt ullamco est sit aliqua dolor do",
-//     image: require("../assets/messagelogo.png"),
-//   },
-//   {
-//     id: "5",
-//     title: "Nolan’s Tenet",
-//     description:
-//       "Lorem ipsum mollit non deserunt ullamco est sit aliqua dolor do",
-//     image: require("../assets/messagelogo.png"),
-//   },
-// ];
 
 const socket = io(ipurl); // Adjust to your server
 
+// Bottom Tab Navigator
+const Tab = createBottomTabNavigator();
+
 const TopicsScreen = ({ route }) => {
   const { userN, userarr } = route.params;
-  const [search, setSearch] = useState("");
   const navigation = useNavigation();
-  const [selectedView, setSelectedView] = useState("forums");
+  const [data, setData] = useState([]);
   const [connectedUsers, setConnectedUsers] = useState(userarr);
 
-  const [data, setdata] = useState([]);
   async function fetchForumData() {
     try {
-      // Call the API to get the forum data
       const response = await fetch(`${ipurl}/api/forums`, {
         method: "GET",
         headers: {
@@ -218,173 +183,125 @@ const TopicsScreen = ({ route }) => {
         },
       });
 
-      // Check if the response is OK
       if (!response.ok) {
         throw new Error("Failed to fetch forum data");
       }
 
-      // Parse the response JSON data
       const forumData = await response.json();
-
-      // Add the fetched data to the `data` array
-      setdata(forumData); // Spread the existing data and new data
-      // console.log("Forum data successfully added:", data);
+      setData(forumData);
     } catch (error) {
       console.error("Error fetching forum data:", error.message);
     }
   }
+
   const connecteduser = () => {
-    console.log("Selected view changed to users");
-    setSelectedView("users");
-  
-    // Emit 'fetch users' to request the list of users from the server
     socket.emit("fetch users");
-  
-    // Listen for the updated users list from the server
+
     socket.on("users", (users) => {
-      console.log("Connected users received are:", users); // Log the users received
-      if (users == null || users.length === 0) {
-        console.log("No users connected");
-      } else {
+      if (users && users.length > 0) {
         const validUsers = users.filter(
-          (user) => user.userID && user.username !== userN // Exclude the current user
+          (user) => user.userID && user.username !== userN
         );
-        console.log("Valid connected users:", validUsers); // Log valid users
-        setConnectedUsers(validUsers); // Update state with valid users
+        setConnectedUsers(validUsers);
       }
     });
+
+    return () => {
+      socket.off("users");
+    };
   };
-  
 
-  // Fetch connected users when "Connected Users" is selected
   useEffect(() => {
-    if (selectedView === "forums") {
-      fetchForumData();
-    }
-    // console.log("useEffect triggered with selectedView:", selectedView); // Log for debugging
-    if (selectedView == "users") {
-      // console.log("Requesting connected users from server..."); // Log for debugging
-      // Emit the event to fetch users
-      socket.emit("fetch users");
-      // Listen for the updated users list
-      socket.on("users", (users) => {
-        console.log("Connected users received:", users); // Log the users received
-        if (users == null || users.length === 0) {
-          console.log("No users connected");
-        } else {
-          const validUsers = users.filter(
-            (user) => user.userID && user.username !== userN // Exclude the current user
-          );
-          // console.log("Valid connected users:", validUsers); // Log valid users
-          setConnectedUsers(validUsers); // Update state with valid users
-        }
-      });
+    fetchForumData();
+    connecteduser();
+  }, []);
 
-      // Clean up the event listener on unmount
-      return () => {
-        console.log("Cleaning up 'users' listener"); // Log for debugging
-        socket.off("users");
-      };
-    }
-  }, [selectedView]);
-
-  // Renders the forum list
-  const renderForumItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.itemContainer}
-      onPress={() =>
-        navigation.navigate("Chat", {
-          username: userN,
-          imgurl: item.image,
-          topic: item.title,
-          description: item.description,
-          forumid: item._id,
-        })
-      }
-    >
-      <Image source={{ uri: item.image }} style={styles.itemImage} />
-      <View style={styles.textContainer}>
-        <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.description}>{item.description}</Text>
-      </View>
-    </TouchableOpacity>
+  // Forums Screen
+  const ForumsScreen = () => (
+    <SafeAreaView style={styles.container}>
+      <FlatList
+        data={data}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.itemContainer}
+            onPress={() =>
+              navigation.navigate("Chat", {
+                username: userN,
+                imgurl: item.image,
+                topic: item.title,
+                description: item.description,
+                forumid: item._id,
+              })
+            }
+          >
+            <Image source={{ uri: item.image }} style={styles.itemImage} />
+            <View style={styles.textContainer}>
+              <Text style={styles.title}>{item.title}</Text>
+              <Text style={styles.description}>{item.description}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+        keyExtractor={(item) => item._id}
+        style={styles.list}
+      />
+    </SafeAreaView>
   );
 
-  // Renders the connected user list
-  const renderUserItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.userItem}
-      onPress={() =>
-        navigation.navigate("UserChat", {
-          name: userN,
-          receiverid: item.userID,
-          recievename: item.username,
-        })
-      }
-    >
-      <Text style={styles.userName}>{item.username}</Text>
-    </TouchableOpacity>
+  // Connected Users Screen
+  const UsersScreen = () => (
+    <SafeAreaView style={styles.container}>
+      <FlatList
+        data={connectedUsers.filter((user) => user.username)}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.userItem}
+            onPress={() =>
+              navigation.navigate("UserChat", {
+                name: userN,
+                receiverid: item.userID,
+                recievename: item.username,
+              })
+            }
+          >
+            <Text style={styles.userName}>{item.username}</Text>
+          </TouchableOpacity>
+        )}
+        keyExtractor={(item) => item.userID}
+        style={styles.list}
+      />
+    </SafeAreaView>
+  );
+
+  // Profile Screen
+  const ProfileScreen = () => (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.profileText}>This is the Profile screen for {userN}</Text>
+    </SafeAreaView>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <FontAwesome
-          name="search"
-          size={16}
-          color="gray"
-          style={{ paddingRight: 10 }}
-        />
-        <TextInput
-          style={{ ...styles.searchInput, flex: 0.9 }}
-          placeholder="Search a topic"
-          value={search}
-          onChangeText={setSearch}
-          placeholderTextColor={"gray"}
-        />
-      </View>
-
-      {/* Buttons for toggling between views */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[
-            styles.button,
-            selectedView === "users" ? styles.activeButton : null,
-          ]}
-          onPress={connecteduser}
-        >
-          <Text style={styles.buttonText}>Connected Users</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.button,
-            selectedView === "forums" ? styles.activeButton : null,
-          ]}
-          onPress={() => setSelectedView("forums")}
-        >
-          <Text style={styles.buttonText}>Forums</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Conditionally render based on selected view */}
-      {selectedView === "forums" ? (
-        <FlatList
-          data={data}
-          renderItem={renderForumItem}
-          keyExtractor={(item) => item.id}
-          style={styles.list}
-        />
-      ) : (
-        <FlatList
-          data={connectedUsers.filter((user) => user.username)}
-          renderItem={renderUserItem}
-          keyExtractor={(item) => item.userID}
-          style={styles.list}
-        />
-      )}
-    </SafeAreaView>
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ color, size }) => {
+          let iconName;
+          if (route.name === "Forums") {
+            iconName = "comments";
+          } else if (route.name === "Users") {
+            iconName = "users";
+          } else if (route.name === "Profile") {
+            iconName = "user";
+          }
+          return <FontAwesome name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: "#fff",
+        tabBarInactiveTintColor: "gray",
+        tabBarStyle: { backgroundColor: "#333B56" },
+      })}
+    >
+      <Tab.Screen name="Forums" component={ForumsScreen} />
+      <Tab.Screen name="Users" component={UsersScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
+    </Tab.Navigator>
   );
 };
 
@@ -393,37 +310,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#22283F",
     paddingHorizontal: 20,
-  },
-  searchContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#333B56",
-    paddingVertical: 10,
-    borderRadius: 10,
-    marginVertical: 20,
-  },
-  searchInput: {
-    color: "gray",
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginVertical: 20,
-  },
-  button: {
-    backgroundColor: "#333B56",
-    padding: 15,
-    borderRadius: 10,
-    width: "45%",
-    alignItems: "center",
-  },
-  activeButton: {
-    backgroundColor: "#555B76", // Highlight the active button
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
   },
   list: {
     flex: 1,
@@ -463,6 +349,12 @@ const styles = StyleSheet.create({
   userName: {
     color: "#fff",
     fontSize: 16,
+  },
+  profileText: {
+    color: "#fff",
+    fontSize: 18,
+    textAlign: "center",
+    marginTop: 20,
   },
 });
 

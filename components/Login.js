@@ -108,45 +108,122 @@
 
 // export default Login;
 
-
-
-import { View, Text, Image, TextInput, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
 import React, { useState } from "react";
-import { useNavigation } from '@react-navigation/native';
-import io from 'socket.io-client';
+import { useNavigation } from "@react-navigation/native";
+import io from "socket.io-client";
 import { ipurl } from "../constants/constant";
+import axios from "axios";
+import * as Application from "expo-application";
 const Login = () => {
   const [name, setName] = useState("");
   const navigation = useNavigation(); // Get navigation object
-  const [connectedUsers,setConnectedUsers]=useState([]);
-  const handleSubmit = async() => {
-    if (name.trim()) {
-      // Connect to the socket server with the username
-      const socket = io(ipurl, {
-        auth: {
-          fetched_userName: name, // Send the username to the server in the auth payload
-        },
-      });
+  const [connectedUsers, setConnectedUsers] = useState([]);
 
-      // Listen for the 'connect' event to confirm connection
-      await socket.on('connect', () => {
-        console.log('Connected to the server with ID:', socket.id);
-        socket.on("user connected", (user) => {
-          setConnectedUsers([...connectedUsers, user]);
-        });
-        console.log("users in login,  ",connectedUsers);
-        
-        // Navigate to the Home screen and pass the user data
-        navigation.navigate('Home', { userN: name, socket,userarr:connectedUsers }); // Pass the socket object to the Home screen if needed
-      });
+  const getDeviceId = () => {
+    return Application.getAndroidId();
+  };
 
-      // Handle connection error if needed
-      socket.on('connect_error', (err) => {
-        console.error('Socket connection error:', err);
-        alert("Failed to connect to the server. Please try again.");
-      });
-    } else {
-      alert("Please enter your name.");
+  const handleSubmit = async () => {
+    try {
+      // Check if the user exists
+      const res = await axios.get(`${ipurl}/getuser/${name.trim()}`);
+
+      // Assuming 'res' is your response object
+      // console.log(
+      //   "response is ",
+      //   res.data.user._id,
+      //   " ",
+      //   res.data.user.deviceId
+      // );
+
+      if (res.data.user._id && res.data.user.deviceId) {
+        // Check if the device ID matches
+        // console.log("ghjk");
+
+        if (res.data.user.deviceId === getDeviceId()) {
+          // console.log("comparing ", res.data.deviceId === getDeviceId());
+          const userID=res.data.user._id;
+          // Device ID matches, allow login and navigate to Home
+          const socket = io(ipurl, {
+            auth: {
+              userID:userID,
+              fetched_userName: name, // Send the device ID to the server
+            },
+          });
+
+          socket.on("connect", () => {
+            console.log("Connected to the server with ID:", socket.id);
+
+            // Navigate to the Home screen and pass the user data
+            navigation.navigate("Home", {
+              userN: name,
+              socket,
+            });
+          });
+
+          socket.on("connect_error", (err) => {
+            console.error("Socket connection error:", err);
+            alert("Failed to connect to the server. Please try again.");
+          });
+
+          return; // End the function here since the user is successfully logged in
+        } else {
+          // Device ID does not match, do not allow login
+          Alert.alert("Login not allowed from this device.");
+          return;
+        }
+      }
+    } catch (error) {
+      // User not found, proceed to add the new user
+      if (error.response && error.response.status === 404) {
+        try {
+          const id = getDeviceId();
+          // Call to add the new user with device ID
+          const addUserRes = await axios.post(`${ipurl}/addnewuser`, {
+            username: name.trim(),
+            id, // Include the device ID
+          });
+
+          if (addUserRes.status === 201) {
+            // Connect to the socket server with the device ID
+            const socket = io(ipurl, {
+              auth: {
+                fetched_userName: name,
+                deviceId, // Send the device ID to the server
+              },
+            });
+
+            socket.on("connect", () => {
+              console.log("Connected to the server with ID:", socket.id);
+
+              // Navigate to the Home screen and pass the user data
+              navigation.navigate("Home", {
+                userN: name,
+                socket,
+              });
+            });
+
+            socket.on("connect_error", (err) => {
+              console.error("Socket connection error:", err);
+              alert("Failed to connect to the server. Please try again.");
+            });
+          }
+        } catch (error) {
+          console.error("Error adding new user:", error.message);
+          alert("Failed to add new user. Please try again.");
+        }
+      } else {
+        console.error("Error checking user existence:", error.message);
+        alert("Failed to check user. Please try again.");
+      }
     }
   };
 
@@ -237,4 +314,3 @@ const Login = () => {
 };
 
 export default Login;
-
