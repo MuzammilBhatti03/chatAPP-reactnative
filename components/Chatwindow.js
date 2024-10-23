@@ -221,6 +221,7 @@ const ChatScreen = ({ route, navigation }) => {
     receiverid,
     recievename,
     forumid,
+    userid,
   } = route.params;
   const [messages, setMessages] = useState([]);
   const [messageContent, setMessageContent] = useState("");
@@ -247,7 +248,9 @@ const ChatScreen = ({ route, navigation }) => {
   }, [forumid]);
   // Send message to the room or individual
   const handleSendMessage = async () => {
-    if (messageContent.trim() && socketRef.current) {
+    const res = await axios.get(`${ipurl}/getuser/${username.trim()}`);
+    const userID = res.data.user._id;
+    if (messageContent.trim() && userID) {
       const newMessage = {
         content: messageContent,
         room: topic,
@@ -256,26 +259,27 @@ const ChatScreen = ({ route, navigation }) => {
       };
 
       if (receiverid) {
-        console.log("Sending message to individual user:", receiverid);
-        // Emit to the server for individual messaging
-        socketRef.current.emit("individual message", {
+        const privateRoom = `${userID}-${receiverid}`; // Create a unique room for the two users
+        console.log("Sending message to individual room:", privateRoom);
+        // Emit to the server for room messaging
+        socketRef.current.emit("private message", {
           content: messageContent,
-          to: receiverid, // Use receiver's username
+          room: privateRoom, // Use private room for individual messages
         });
       } else {
-        console.log(
-          "Sending message to the room:",
-          topic,
-          "  forum id is: ",
-          forumid
-        );
-        // Emit the message to the server (for this specific room)
-        socketRef.current.emit("private message", newMessage);
+        console.log("Sending message to the room:", topic);
+        // Emit to the server for group room messaging
+        socketRef.current.emit("private message", {
+          content: messageContent,
+          room: topic,
+        });
       }
+
+      // console.log("socket id is ", userID);
 
       try {
         const apiMessage = {
-          userID: socketRef.current.id, // Add the appropriate user ID
+          userID: userID, // Add the appropriate user ID
           username: username, // User's name
           content: messageContent, // Message content
           forumID: forumid, // This should be the forum/topic ID
@@ -286,10 +290,10 @@ const ChatScreen = ({ route, navigation }) => {
         const response = await axios.post(
           `${ipurl}/forums/${forumid}/messages`,
           apiMessage
-        ); // Corrected URL
+        ); 
 
         if (response.status === 201) {
-          console.log("Message saved successfully:", response.data);
+          // console.log("Message saved successfully:", response.data);
         } else {
           console.error("Failed to save message:", response.data);
         }
@@ -302,28 +306,48 @@ const ChatScreen = ({ route, navigation }) => {
     }
   };
   useEffect(() => {
-    socketRef.current = io(ipurl, {
-      auth: { fetched_userName: username },
-    });
-
-    // Join the appropriate room based on whether there's a receiver
-    if (receiverid) {
-    } else {
-      socketRef.current.emit("join room", topic);
-    }
-
-    // Listen for incoming messages in the room
-    socketRef.current.on("private message", ({ content, from }) => {
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { id: String(prevMessages.length + 1), user: from, content },
-      ]);
-    });
+    const setupSocket = async () => {
+      const res = await axios.get(`${ipurl}/getuser/${username.trim()}`);
+      const userID = res.data.user._id;
+      console.log("user id in useEffect ", userID);
+    
+      socketRef.current = io(ipurl, {
+        auth: {
+          userID: userID,
+          fetched_userName: username,
+        },
+      });
+    
+      // Join the appropriate room based on whether there's a receiver
+      if (receiverid) {
+        // Join a private room between the two users
+        const privateRoom = `${userID}-${receiverid}`;
+        socketRef.current.emit("join room", privateRoom);
+      } else {
+        // Join a group room
+        socketRef.current.emit("join room", topic);
+      }
+    
+      // Listen for incoming messages
+      socketRef.current.on("private message", ({ content, from }) => {
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { id: String(prevMessages.length + 1), user: from, content },
+        ]);
+      });
+    };
+  
+    setupSocket();
+  
+    // Cleanup function
     return () => {
-      socketRef.current.off("private message");
-      // socketRef.current.off("individual message");
+      console.log("Cleanup: Disconnecting socket");
+      if (socketRef.current && socketRef.current.disconnect) {
+        socketRef.current.disconnect();
+      }
     };
   }, [username, topic, receiverid]);
+  
   const filterDate = (time) => {
     const tim = new Date(time);
     return tim.toLocaleDateString();
@@ -421,7 +445,7 @@ const ChatScreen = ({ route, navigation }) => {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={20} color="white" />
+            <Ionicons name="chevron-back" size={40} color="white" />
           </TouchableOpacity>
 
           <Image source={{ uri: imgurl }} style={styles.itemImage} />

@@ -156,13 +156,16 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  Modal,
+  Alert,
 } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import io from "socket.io-client";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
 import { ipurl } from "../constants/constant";
-
+import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
+import axios from "axios";
 const socket = io(ipurl); // Adjust to your server
 
 // Bottom Tab Navigator
@@ -193,29 +196,9 @@ const TopicsScreen = ({ route }) => {
       console.error("Error fetching forum data:", error.message);
     }
   }
-
-  const connecteduser = () => {
-    socket.emit("fetch users");
-
-    socket.on("users", (users) => {
-      if (users && users.length > 0) {
-        const validUsers = users.filter(
-          (user) => user.userID && user.username !== userN
-        );
-        setConnectedUsers(validUsers);
-      }
-    });
-
-    return () => {
-      socket.off("users");
-    };
-  };
-
   useEffect(() => {
-    fetchForumData();
-    connecteduser();
+    fetchForumData(); // Fetch data when the component mounts
   }, []);
-
   // Forums Screen
   const ForumsScreen = () => (
     <SafeAreaView style={styles.container}>
@@ -231,6 +214,7 @@ const TopicsScreen = ({ route }) => {
                 topic: item.title,
                 description: item.description,
                 forumid: item._id,
+                userid: "111111",
               })
             }
           >
@@ -248,34 +232,145 @@ const TopicsScreen = ({ route }) => {
   );
 
   // Connected Users Screen
-  const UsersScreen = () => (
-    <SafeAreaView style={styles.container}>
-      <FlatList
-        data={connectedUsers.filter((user) => user.username)}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.userItem}
-            onPress={() =>
-              navigation.navigate("UserChat", {
-                name: userN,
-                receiverid: item.userID,
-                recievename: item.username,
-              })
-            }
-          >
-            <Text style={styles.userName}>{item.username}</Text>
-          </TouchableOpacity>
-        )}
-        keyExtractor={(item) => item.userID}
-        style={styles.list}
-      />
-    </SafeAreaView>
-  );
 
+  const UsersScreen = () => {
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [newUsername, setNewUsername] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [connectedUsers, setConnectedUsers] = useState([]); // State to hold connected users
+    // Replace with actual username or prop
+
+    useEffect(() => {
+      const fetchConnectedUsers = async () => {
+        try {
+          const response = await axios.get(`${ipurl}/connected-users/${userN}`); // Adjust to your API endpoint
+          console.log("response is fetch connected user ",response);
+          
+          if (response.data && response.data.connectedUsers) {
+            setConnectedUsers(response.data.connectedUsers);
+          }
+        } catch (error) {
+          console.error("Error fetching connected users:", error);
+          Alert.alert("Error", "Could not fetch connected users.");
+        }
+      };
+
+      fetchConnectedUsers();
+    }, []);
+
+    const addUser = async () => {
+      if (newUsername.trim() === userN) {
+        Alert.alert("Error", "You cannot add yourself!");
+        return;
+      }
+
+      try {
+        setLoading(true);
+        console.log("newusr name ", newUsername, "  user", userN);
+        // Check if the user exists in the database
+        const res = await axios.get(`${ipurl}/getuser/${newUsername.trim()}`);
+        
+
+        if (res.data) {
+          const conn_userid = res.data.user._id;
+          console.log("get user api res ", res.data," conn id ",conn_userid);
+          // Post the new connected user to the server
+          await axios.post(`${ipurl}/add-connected-user`, {
+            username:userN, // The username of the current user
+            userIDToAdd: conn_userid, // The ID of the user to be added
+          });
+
+          // Update the state to include the new connected user
+          setConnectedUsers((prevConnectedUsers) => [
+            ...prevConnectedUsers,
+            res.data.user, // Add the user object or just conn_userid if preferred
+          ]);
+
+          Alert.alert("Success", `${newUsername} has been added!`);
+          setIsModalVisible(false);
+        } else {
+          Alert.alert("Error", "User does not exist.");
+        }
+      } catch (error) {
+        console.error("Error checking user:", error);
+        Alert.alert("Error", "Could not validate user. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.title}>Connected Users</Text>
+
+        {connectedUsers.length > 0 ? (
+          <FlatList
+            data={connectedUsers}
+            renderItem={({ item }) => (
+              <View style={styles.userItem}>
+                <Text style={styles.userName}>{item._id}</Text>
+              </View>
+            )}
+            keyExtractor={(item) => item._id}
+            style={styles.list}
+          />
+        ) : (
+          <Text>No users present</Text>
+        )}
+
+        {/* Add Button */}
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => setIsModalVisible(true)}
+        >
+          <FontAwesome6 name="add" size={85} color="green" />
+        </TouchableOpacity>
+
+        {/* Modal for adding user */}
+        <Modal
+          transparent={true}
+          visible={isModalVisible}
+          onRequestClose={() => setIsModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Add User</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter username"
+                value={newUsername}
+                onChangeText={setNewUsername}
+                autoCapitalize="none"
+              />
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={addUser}
+                  disabled={loading}
+                >
+                  <Text style={styles.buttonText}>
+                    {loading ? "Loading..." : "Submit"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.cancelButton]}
+                  onPress={() => setIsModalVisible(false)}
+                >
+                  <Text style={styles.buttonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </SafeAreaView>
+    );
+  };
   // Profile Screen
   const ProfileScreen = () => (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.profileText}>This is the Profile screen for {userN}</Text>
+      <Text style={styles.profileText}>
+        This is the Profile screen for {userN}
+      </Text>
     </SafeAreaView>
   );
 
@@ -314,6 +409,12 @@ const styles = StyleSheet.create({
   list: {
     flex: 1,
   },
+  addButton: {
+    position: "absolute",
+    bottom: 20, // Adjust this value based on your preference
+    right: 20, // Adjust this value based on your preference
+    backgroundColor: "transparent",
+  },
   itemContainer: {
     flexDirection: "row",
     backgroundColor: "#333B56",
@@ -347,7 +448,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   userName: {
-    color: "#fff",
+    color: "white",
     fontSize: 16,
   },
   profileText: {
@@ -355,6 +456,53 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: "center",
     marginTop: 20,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContent: {
+    width: "80%",
+    backgroundColor: "white",
+    borderRadius: 10,
+    padding: 20,
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 20,
+    marginBottom: 20,
+  },
+  input: {
+    height: 40,
+    width: "100%",
+    borderColor: "gray",
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    marginBottom: 20,
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  button: {
+    flex: 1,
+    backgroundColor: "green",
+    padding: 10,
+    marginRight: 10,
+    alignItems: "center",
+    borderRadius: 5,
+  },
+  cancelButton: {
+    backgroundColor: "red",
+    marginLeft: 10,
+  },
+  buttonText: {
+    color: "white",
+    fontSize: 16,
   },
 });
 
