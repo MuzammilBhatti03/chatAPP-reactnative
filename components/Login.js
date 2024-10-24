@@ -217,7 +217,7 @@ const Login = () => {
         }
       } else {
         console.error("Error checking user existence:", error.message);
-        alert("Failed to check user. Please try again.");
+        alert("Failed to check user. Please try again");
       }
     }
   };
