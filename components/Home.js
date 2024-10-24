@@ -244,8 +244,8 @@ const TopicsScreen = ({ route }) => {
       const fetchConnectedUsers = async () => {
         try {
           const response = await axios.get(`${ipurl}/connected-users/${userN}`); // Adjust to your API endpoint
-          console.log("response is fetch connected user ",response);
-          
+          // console.log("response is fetch connected user ",response);
+
           if (response.data && response.data.connectedUsers) {
             setConnectedUsers(response.data.connectedUsers);
           }
@@ -269,14 +269,13 @@ const TopicsScreen = ({ route }) => {
         console.log("newusr name ", newUsername, "  user", userN);
         // Check if the user exists in the database
         const res = await axios.get(`${ipurl}/getuser/${newUsername.trim()}`);
-        
 
         if (res.data) {
           const conn_userid = res.data.user._id;
-          console.log("get user api res ", res.data," conn id ",conn_userid);
+          // console.log("get user api res ", res.data," conn id ",conn_userid);
           // Post the new connected user to the server
           await axios.post(`${ipurl}/add-connected-user`, {
-            username:userN, // The username of the current user
+            username: userN, // The username of the current user
             userIDToAdd: conn_userid, // The ID of the user to be added
           });
 
@@ -307,9 +306,22 @@ const TopicsScreen = ({ route }) => {
           <FlatList
             data={connectedUsers}
             renderItem={({ item }) => (
-              <View style={styles.userItem}>
-                <Text style={styles.userName}>{item._id}</Text>
-              </View>
+              <TouchableOpacity
+                style={styles.userItem}
+                onPress={() => {
+                  navigation.navigate("Chat", {
+                    username: userN,
+                    
+                    description:"send message to chat with him",
+                    topic: item.username,
+                    receiverid: item._id,
+                    recievename: item.username,
+                  });
+                }}
+              >
+                <Text style={styles.userName}>{item.username}</Text>
+                <Text></Text>
+              </TouchableOpacity>
             )}
             keyExtractor={(item) => item._id}
             style={styles.list}
