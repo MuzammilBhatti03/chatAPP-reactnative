@@ -1,36 +1,37 @@
 import React from 'react';
-import { View, FlatList, Image, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, FlatList, Image, Text, TouchableOpacity } from 'react-native';
+import { styles } from './Style';
 
 const data = [
   {
     id: "1",
     title: "Covid19",
     description: "Trends, precautionary measures and vaccine information",
-    image: require("../assets/messagelogo.png"),
+    image: require("../../../Images/Icons/messagelogo.png"),
   },
   {
     id: "2",
     title: "Netflix Dark",
     description: "Lorem ipsum mollit non deserunt ullamco est sit aliqua dolor do",
-    image: require("../assets/messagelogo.png"),
+    image: require("../../../Images/Icons/messagelogo.png"),
   },
   {
     id: "3",
     title: "IPL 2020",
     description: "Lorem ipsum mollit non deserunt ullamco est sit aliqua dolor do",
-    image: require("../assets/messagelogo.png"),
+    image: require("../../../Images/Icons/messagelogo.png"),
   },
   {
     id: "4",
     title: "Black Lives Matter",
     description: "Lorem ipsum mollit non deserunt ullamco est sit aliqua dolor do",
-    image: require("../assets/messagelogo.png"),
+    image: require("../../../Images/Icons/messagelogo.png"),
   },
   {
     id: "5",
     title: "Nolan’s Tenet",
     description: "Lorem ipsum mollit non deserunt ullamco est sit aliqua dolor do",
-    image: require("../assets/messagelogo.png"),
+    image: require("../../../Images/Icons/messagelogo.png"),
   },
 ];
 
@@ -67,38 +68,5 @@ const Forums = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#22283F",
-    paddingHorizontal: 20,
-  },
-  itemContainer: {
-    flexDirection: "row",
-    backgroundColor: "#333B56",
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-    alignItems: "center",
-  },
-  itemImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 10,
-  },
-  textContainer: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  description: {
-    fontSize: 14,
-    color: "#bbb",
-  },
-});
-
+  
 export default Forums;

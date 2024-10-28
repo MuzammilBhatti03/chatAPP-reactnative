@@ -1,0 +1,64 @@
+import { StyleSheet } from "react-native";
+
+export const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: "black",
+        padding: 20
+    },
+    messageLogoView: {
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    image: {
+        width: 250,
+        height: 150,
+    },
+    textView: {
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        marginTop: 0,
+    },
+    talkText: {
+        fontSize: 40,
+        color: "white"
+    },
+    discussText: {
+        fontSize: 20,
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        textAlign: "center",
+        color: "white",
+    },
+    textInput1: {
+        height: 40,
+        borderColor: "white",
+        backgroundColor: "white",
+        borderWidth: 1,
+        paddingHorizontal: 10,
+        borderRadius: 20,
+        marginTop: 35,
+    },
+    buttonView: {
+        justifyContent: "center",
+        alignItems: "center",
+        marginTop: 15,
+    },
+    opacity: {
+        height: 40,
+        width: "100%",
+        backgroundColor: "rgb(254,44,120)",
+        borderWidth: 1,
+        paddingHorizontal: 10,
+        borderRadius: 20,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    continueText: {
+        color: "white"
+    }
+
+})

@@ -119,9 +119,11 @@ import {
 import React, { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import io from "socket.io-client";
-import { ipurl } from "../constants/constant";
+import { ipurl } from "../../../constants/constant";
 import axios from "axios";
 import * as Application from "expo-application";
+import { styles } from "./Style";
+
 const Login = () => {
   const [name, setName] = useState("");
   const navigation = useNavigation(); // Get navigation object
@@ -135,14 +137,14 @@ const Login = () => {
     try {
       // Step 1: Check if the user exists
       const res = await axios.get(`${ipurl}/getuser/${name.trim()}`);
-  
+
       if (res.data.user._id && res.data.user.deviceId) {
         // Step 2: Compare device ID
         if (res.data.user.deviceId === getDeviceId()) {
           // Device ID matches, proceed with login and socket connection
           const userID = res.data.user._id;
           console.log("Existing user ID:", userID);
-  
+
           // Establish socket connection
           const socket = io(ipurl, {
             auth: {
@@ -150,7 +152,7 @@ const Login = () => {
               fetched_userName: name, // Send the username and userID
             },
           });
-  
+
           socket.on("connect", () => {
             console.log("Connected to the server with userID:", userID);
             // Navigate to Home screen
@@ -159,12 +161,12 @@ const Login = () => {
               socket,
             });
           });
-  
+
           socket.on("connect_error", (err) => {
             console.error("Socket connection error:", err);
             alert("Failed to connect to the server. Please try again.");
           });
-  
+
           return; // Exit after successful login
         } else {
           // Step 3: Device ID does not match
@@ -182,13 +184,13 @@ const Login = () => {
             username: name.trim(),
             deviceId,
           });
-  
+
           if (addUserRes.status === 201) {
             // Step 6: Fetch the newly created user’s data to get the userID
             const res = await axios.get(`${ipurl}/getuser/${name.trim()}`);
             const userID = res.data.user._id;
             console.log("Newly created user ID:", userID);
-  
+
             // Step 7: Establish socket connection for the new user
             const socket = io(ipurl, {
               auth: {
@@ -196,7 +198,7 @@ const Login = () => {
                 userID: userID, // Send the newly created userID
               },
             });
-  
+
             socket.on("connect", () => {
               console.log("Connected to the server with new userID:", socket.id);
               // Navigate to Home screen
@@ -205,7 +207,7 @@ const Login = () => {
                 socket,
               });
             });
-  
+
             socket.on("connect_error", (err) => {
               console.error("Socket connection error:", err);
               alert("Failed to connect to the server. Please try again.");
@@ -221,87 +223,41 @@ const Login = () => {
       }
     }
   };
-  
+
 
   return (
-    <View style={{ backgroundColor: "black", flex: 1, padding: 20 }}>
-      <View style={{ justifyContent: "flex-end" }}>
-        <View
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <Image
-            style={{
-              width: 250,
-              height: 150,
-            }}
-            source={require("../assets/messagelogo.png")}
-          />
-        </View>
-        <View
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            marginTop: 0,
-          }}
-        >
-          <Text style={{ fontSize: 40, color: "white" }}>Talk anonymously</Text>
-          <Text
-            style={{
-              fontSize: 20,
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              textAlign: "center",
-              color: "white",
-            }}
-          >
-            Discuss about diverse topics with anonymous people
-          </Text>
-        </View>
+    <View style={styles.container}>
+      <View style={styles.messageLogoView} >
+        <Image
+          style={styles.image}
+          source={require("../../../Images/Icons/messagelogo.png")}
+        />
+      </View>
+      <View
+        style={styles.textView}>
+        <Text style={styles.talkText}>Talk anonymously</Text>
+        <Text
+          style={styles.discussText}>
+          Discuss about diverse topics with anonymous people
+        </Text>
       </View>
       <View>
         <View>
           <TextInput
-            style={{
-              height: 40,
-              borderColor: "white",
-              backgroundColor: "white",
-              borderWidth: 1,
-              paddingHorizontal: 10,
-              borderRadius: 20,
-              marginTop: 35,
-            }}
+            style={styles.textInput1}
             placeholder="Enter your name"
             value={name}
             onChangeText={(text) => setName(text)} // Update state with the input value
           />
         </View>
         <View
-          style={{
-            justifyContent: "center",
-            alignItems: "center",
-            marginTop: 15,
-          }}
+          style={styles.buttonView}
         >
           <TouchableOpacity
-            style={{
-              height: 40,
-              width: "100%",
-              backgroundColor: "rgb(254,44,120)",
-              borderWidth: 1,
-              paddingHorizontal: 10,
-              borderRadius: 20,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+            style={styles.opacity}
             onPress={handleSubmit} // Call handleSubmit on press
           >
-            <Text style={{ color: "white" }}>Continue</Text>
+            <Text style={styles.continueText}>Continue</Text>
           </TouchableOpacity>
         </View>
       </View>
