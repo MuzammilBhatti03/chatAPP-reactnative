@@ -166,6 +166,7 @@ import { ipurl } from "../../../constants/constant";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import axios from "axios";
 import { styles } from "./Style";
+import QRScreen from "../QRScreen/QRScreen";
 
 const socket = io(ipurl); // Adjust to your server
 
@@ -384,6 +385,7 @@ const TopicsScreen = ({ route }) => {
       <Text style={styles.profileText}>
         This is the Profile screen for {userN}
       </Text>
+      <QRScreen username={userN} navigation={navigation}/>
     </SafeAreaView>
   );
 

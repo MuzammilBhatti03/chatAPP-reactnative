@@ -1,10 +1,12 @@
-import { StyleSheet } from "react-native";
+import { StatusBar } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 
 export const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "black",
-        padding: 20
+        padding: 20,
+        paddingTop: Platform.OS === "android" ? StatusBar.currentHeight + 10 : 0,
     },
     messageLogoView: {
         display: "flex",

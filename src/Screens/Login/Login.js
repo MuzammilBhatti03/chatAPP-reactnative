@@ -115,6 +115,7 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  SafeAreaView,
 } from "react-native";
 import React, { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
@@ -226,7 +227,7 @@ const Login = () => {
 
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.messageLogoView} >
         <Image
           style={styles.image}
@@ -261,7 +262,7 @@ const Login = () => {
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

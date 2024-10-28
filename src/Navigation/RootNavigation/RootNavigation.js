@@ -7,6 +7,8 @@ import Home from '../../Screens/Home/Home';
 import UsersPanel from '../../Screens/UsersPanel/UsersPanel';
 import Forums from '../../Screens/Forums/Forums';
 import UserChatScreen from '../../Screens/UserChatScreen/UserChatScreen';
+import QRScreen from '../../Screens/QRScreen/QRScreen';
+import ScannerScreen from '../../Screens/ScannerScreen/ScannerScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -36,6 +38,8 @@ export default function RootNavigation() {
          <Stack.Screen name="UsersPanel" component={UsersPanel} />
          <Stack.Screen name="Forums" component={Forums} />
          <Stack.Screen name="UserChat" component={UserChatScreen} />
+         <Stack.Screen name="QR" component={QRScreen}/>
+         <Stack.Screen name='Scanner' component={ScannerScreen}/>
       </Stack.Navigator>
       <StatusBar style="auto" />
     </NavigationContainer>
