@@ -10,7 +10,7 @@ import { useNavigation } from "@react-navigation/native";
 
 
 const QRScreen = ({ username,  }) => {
-    const url = username;
+    const url = `appname://user/${username}`;
     const qrCodeRef = useRef(null); // No type annotation needed in JS
     const navigation=useNavigation();
 
@@ -49,7 +49,7 @@ const QRScreen = ({ username,  }) => {
             <View style={styles.topContainer}>
                 <AntDesign name="close" size={24} color="black" style={styles.arrow} />
                 <Text style={styles.qrText}>MY QR</Text>
-                <TouchableOpacity onPress={() => navigation.navigate("Scanner")}>
+                <TouchableOpacity onPress={() => navigation.navigate("Scanner" ,{userN:username})}>
                     <MaterialIcons 
                         name="qr-code-scanner" 
                         size={24} 

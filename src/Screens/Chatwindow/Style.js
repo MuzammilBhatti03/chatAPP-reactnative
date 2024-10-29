@@ -81,7 +81,7 @@ export const styles = StyleSheet.create({
       date: {
         justifyContent: "center",
         marginLeft: "34%",
-        maxWidth: 100,
+        maxWidth: 120,
         minWidth: 100,
         borderRadius: 10,
         padding: 5,
