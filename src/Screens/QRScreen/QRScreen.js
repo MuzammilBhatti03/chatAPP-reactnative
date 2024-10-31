@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { SafeAreaView, Text, TouchableOpacity, View, Alert } from "react-native";
+import { SafeAreaView, Text, TouchableOpacity, View, Alert, StatusBar } from "react-native";
 import { styles } from "./Style";
 import QRCode from "react-native-qrcode-svg";
 import AntDesign from "@expo/vector-icons/AntDesign";
@@ -46,8 +46,8 @@ const QRScreen = ({ username,  }) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <StatusBar backgroundColor={white}/>
             <View style={styles.topContainer}>
-                <AntDesign name="close" size={24} color="black" style={styles.arrow} />
                 <Text style={styles.qrText}>MY QR</Text>
                 <TouchableOpacity onPress={() => navigation.navigate("Scanner" ,{userN:username})}>
                     <MaterialIcons 

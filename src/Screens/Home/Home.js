@@ -313,8 +313,8 @@ const TopicsScreen = ({ route }) => {
                 onPress={() => {
                   navigation.navigate("Chat", {
                     username: userN,
-                    
-                    description:"send message to chat with him",
+
+                    description: "send message to chat with him",
                     topic: item.username,
                     receiverid: item._id,
                     recievename: item.username,
@@ -381,12 +381,7 @@ const TopicsScreen = ({ route }) => {
   };
   // Profile Screen
   const ProfileScreen = () => (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.profileText}>
-        This is the Profile screen for {userN}
-      </Text>
-      <QRScreen username={userN} navigation={navigation}/>
-    </SafeAreaView>
+    <QRScreen username={userN} navigation={navigation} />
   );
 
   return (
@@ -410,10 +405,10 @@ const TopicsScreen = ({ route }) => {
     >
       <Tab.Screen name="Forums" component={ForumsScreen} />
       <Tab.Screen name="Users" component={UsersScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} 
+      options={{headerShown:false}}/>
     </Tab.Navigator>
   );
 };
-
 
 export default TopicsScreen;

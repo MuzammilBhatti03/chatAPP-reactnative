@@ -11,15 +11,11 @@ export const styles = StyleSheet.create({
         flexDirection: 'row',
         marginTop: 10
     },
-    arrow: {
-        color: 'white'
-    },
     qrText: {
         textAlign: 'center',
         fontSize: 22,
         fontWeight: 'bold',
         flex: 1,
-        paddingRight: 15,
         color: 'white'
     },
     bottomContainer: {
