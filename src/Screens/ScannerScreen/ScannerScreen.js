@@ -19,13 +19,13 @@ import { ipurl } from "../../../constants/constant";
 import { useNavigation } from "@react-navigation/native";
 
 const ScannerScreen = ({ route }) => {
-    const {userN}=route.params;
+  const { userN } = route.params;
   const [permission, requestPermission] = useCameraPermissions();
   const [image, setImage] = useState(null);
   const [flashlight, setFlashLight] = useState(false);
   const qrLock = useRef(false);
   const appState = useRef(AppState.currentState);
-  const navigation=useNavigation();
+  const navigation = useNavigation();
 
   const toggleFlashlight = () => setFlashLight(!flashlight);
 
@@ -57,16 +57,16 @@ const ScannerScreen = ({ route }) => {
 
   if (!permission) return <View />;
 
-  if (!permission.granted) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.message}>
-          We need your permission to show the camera
-        </Text>
-        <Button onPress={requestPermission} title="Grant Permission" />
-      </View>
-    );
-  }
+  // if (!permission.granted) {
+  //   return (
+  //     <View style={styles.container}>
+  //       <Text style={styles.message}>
+  //         We need your permission to show the camera
+  //       </Text>
+  //       <Button onPress={requestPermission} title="Grant Permission" />
+  //     </View>
+  //   );
+  // }
 
   return (
     <View style={styles.container}>
@@ -85,34 +85,34 @@ const ScannerScreen = ({ route }) => {
                 );
                 const userID = await response.data.user._id;
                 const res = await axios.post(`${ipurl}/add-connected-user`, {
-                  username:userN,
+                  username: userN,
                   userIDToAdd: userID,
                 });
                 if (res.status === 200) {
                   //   navigation.navigate("Home");
-                  try{
+                  try {
                     const response = await axios.get(
                       `${ipurl}/getuser/${userN.trim()}`
                     );
                     const userID = await response.data.user._id;
                     const res = await axios.post(`${ipurl}/add-connected-user`, {
-                      username:username,
+                      username: username,
                       userIDToAdd: userID,
                     });
-                    if(res.status===200){
+                    if (res.status === 200) {
                       Alert.alert("user added successfully");
                       navigation.navigate("Home", {
                         userN: userN,
                       });
                     }
-                  }catch (error) {
+                  } catch (error) {
                     console.error("Error adding user:", error);
                     Alert.alert(
                       "Error",
                       "An error occurred while adding the user."
                     );
                   }
-                  
+
                 } else {
                   Alert.alert("Error", "Failed to add user. Please try again.");
                 }

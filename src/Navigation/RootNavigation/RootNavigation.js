@@ -16,30 +16,35 @@ export default function RootNavigation() {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Login">
-        <Stack.Screen 
-          name="Login" 
-          component={Login} 
+        <Stack.Screen
+          name="Login"
+          component={Login}
           options={{ headerShown: false }} // Hide header if desired
         />
-        <Stack.Screen 
-          name="Home" 
-          component={Home} 
-          options={{ title: 'Home',
-            headerStyle:{backgroundColor: '#333B56',color: "white"},
+        <Stack.Screen
+          name="Home"
+          component={Home}
+          options={{
+            title: 'Home',
+            headerStyle: { backgroundColor: '#333B56', color: "white" },
             headerTintColor: "white",
             headerShown: false
-           }} 
+          }}
         />
-        <Stack.Screen 
-          name="Chat" 
-          component={Chatwindow} 
-          options={{ title: 'Chat',headerShown: false  }} 
+        <Stack.Screen
+          name="Chat"
+          component={Chatwindow}
+          options={{ title: 'Chat', headerShown: false }}
         />
-         <Stack.Screen name="UsersPanel" component={UsersPanel} />
-         <Stack.Screen name="Forums" component={Forums} />
-         <Stack.Screen name="UserChat" component={UserChatScreen} />
-         <Stack.Screen name="QR" component={QRScreen}/>
-         <Stack.Screen name='Scanner' component={ScannerScreen}/>
+        <Stack.Screen name="UsersPanel" component={UsersPanel} />
+        <Stack.Screen name="Forums" component={Forums} />
+        <Stack.Screen name="UserChat" component={UserChatScreen} />
+        <Stack.Screen name="QR" component={QRScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen name='Scanner' component={ScannerScreen}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
       <StatusBar style="auto" />
     </NavigationContainer>

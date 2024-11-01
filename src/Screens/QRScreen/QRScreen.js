@@ -2,17 +2,16 @@ import React, { useRef } from "react";
 import { SafeAreaView, Text, TouchableOpacity, View, Alert, StatusBar } from "react-native";
 import { styles } from "./Style";
 import QRCode from "react-native-qrcode-svg";
-import AntDesign from "@expo/vector-icons/AntDesign";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
 
-const QRScreen = ({ username,  }) => {
+const QRScreen = ({ username, }) => {
     const url = `appname://user/${username}`;
     const qrCodeRef = useRef(null); // No type annotation needed in JS
-    const navigation=useNavigation();
+    const navigation = useNavigation();
 
     const onShare = async () => {
         try {
@@ -46,14 +45,14 @@ const QRScreen = ({ username,  }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar backgroundColor={white}/>
+            <StatusBar backgroundColor="white" />
             <View style={styles.topContainer}>
-                <Text style={styles.qrText}>MY QR</Text>
-                <TouchableOpacity onPress={() => navigation.navigate("Scanner" ,{userN:username})}>
-                    <MaterialIcons 
-                        name="qr-code-scanner" 
-                        size={24} 
-                        color="white" 
+                <Text style={styles.qrText}>QR</Text>
+                <TouchableOpacity onPress={() => navigation.navigate("Scanner", { userN: username })}>
+                    <MaterialIcons
+                        name="qr-code-scanner"
+                        size={24}
+                        color="white"
                     />
                 </TouchableOpacity>
             </View>

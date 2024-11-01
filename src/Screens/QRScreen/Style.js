@@ -16,7 +16,8 @@ export const styles = StyleSheet.create({
         fontSize: 22,
         fontWeight: 'bold',
         flex: 1,
-        color: 'white'
+        color: 'white',
+        paddingLeft:11
     },
     bottomContainer: {
         flex: 1,
