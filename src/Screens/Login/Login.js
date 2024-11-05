@@ -254,15 +254,9 @@ const Login = () => {
         <View
           style={styles.buttonView}
         >
-          {/* <TouchableOpacity
-            style={styles.opacity}
-            onPress={handleSubmit} // Call handleSubmit on press
-          >
-            <Text style={styles.continueText}>Continue</Text>
-          </TouchableOpacity> */}
           <TouchableOpacity
             style={styles.opacity}
-            onPress={()=> navigation.navigate('QR')} 
+            onPress={handleSubmit} // Call handleSubmit on press
           >
             <Text style={styles.continueText}>Continue</Text>
           </TouchableOpacity>

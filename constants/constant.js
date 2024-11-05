@@ -1,1 +1,1 @@
-export const ipurl = 'https://9297-203-96-171-109.ngrok-free.app';
+export const ipurl = 'http://192.168.0.104:4200';

@@ -329,7 +329,7 @@ const TopicsScreen = ({ route }) => {
             style={styles.list}
           />
         ) : (
-          <Text>No users present</Text>
+          <Text style={{color:'white'}}>No users present</Text>
         )}
 
         {/* Add Button */}
