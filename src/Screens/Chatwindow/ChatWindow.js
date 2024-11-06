@@ -76,14 +76,16 @@ const ChatScreen = ({ route, navigation }) => {
       const userID = res.data.user._id;
 
       if (messageContent.trim() && userID) {
+        const timestamp = new Date().toISOString();
+
         const newMessage = {
-          id: String(messages.length + 1), // Generate a unique ID
+          _id: String(messages.length + 1), // Generate a unique ID
           content: messageContent,
           username: username,
-          createdAt: new Date(),
+          createdAt: timestamp,
           isFailed: false,
         };
-
+        setMessageContent(""); // Clear input
         // Check if it's a private message (receiverid is present)
         if (receiverid) {
           const privateRoom = [userID, receiverid].sort().join("-"); // Create unique room
@@ -92,7 +94,7 @@ const ChatScreen = ({ route, navigation }) => {
           socketRef.current.emit("private message", {
             content: messageContent,
             room: privateRoom,
-            createdAt: new Date(),
+            createdAt: timestamp,
           });
 
           // Save private message to the database
@@ -100,12 +102,12 @@ const ChatScreen = ({ route, navigation }) => {
             senderID: userID,
             receiverID: receiverid,
             content: messageContent,
-            createdAt: new Date(),
+            createdAt: timestamp,
           };
 
           // Append the new message to the messages state
           setMessages((prevMessages) => [newMessage, ...prevMessages]);
-
+          setMessageContent(""); // Clear input
           // Save message to the API
           await axios.post(`${ipurl}/api/messages/send`, privateMessage);
         } else {
@@ -113,21 +115,21 @@ const ChatScreen = ({ route, navigation }) => {
           socketRef.current.emit("private message", {
             content: messageContent,
             room: topic,
-            createdAt: new Date(),
+            createdAt: timestamp,
           });
-          
+
           // Save forum message to the database (separate API for forum messages)
           const forumMessage = {
             userID: userID,
             username: username,
             content: messageContent,
             forumID: forumid,
-            createdAt: new Date(),
+            createdAt: timestamp,
           };
 
           // Append the new message to the messages state
           setMessages((prevMessages) => [newMessage, ...prevMessages]);
-
+          setMessageContent(""); // Clear input
           await axios.post(`${ipurl}/forums/${forumid}/messages`, forumMessage);
         }
 
