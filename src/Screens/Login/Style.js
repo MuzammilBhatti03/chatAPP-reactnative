@@ -36,7 +36,7 @@ export const styles = StyleSheet.create({
         color: "white",
     },
     textInput1: {
-        height: 40,
+        height: 50,
         borderColor: "white",
         backgroundColor: "white",
         borderWidth: 1,
@@ -50,7 +50,7 @@ export const styles = StyleSheet.create({
         marginTop: 15,
     },
     opacity: {
-        height: 40,
+        height: 50,
         width: "100%",
         backgroundColor: "rgb(254,44,120)",
         borderWidth: 1,

@@ -9,6 +9,9 @@ import io from "socket.io-client";
 import axios from "axios";
 import { ipurl } from "../../../constants/constant";
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { addDataToDb,  fetchDataFromDb,} from "../SQLiteScreen";
+import { v4 as uuidv4 } from 'uuid';
+
 
 const ChatScreen = ({ route, navigation }) => {
   const {
@@ -22,7 +25,18 @@ const ChatScreen = ({ route, navigation }) => {
   const [selectedMessageId, setSelectedMessageId] = useState(null); // Track selected message for timestamp
   const [seenderid, setsenderid] = useState("");
 
-
+  useEffect(() => {
+    // getMessagesFromDatabase((fetchedMessages) => {
+    //   setMessages(fetchedMessages.reverse());
+    // });
+  }, []);
+  const fetchfromSqlite=async (roomid)=>{
+    let res=await fetchDataFromDb(roomid);
+    // console.log("res is ",res);
+    if(res){
+      setMessages(res);
+    }
+  }
   // Fetch forum messages (group or private) from the API
   const fetchForumMessages = async (forumID) => {
     try {
@@ -58,17 +72,32 @@ const ChatScreen = ({ route, navigation }) => {
     }
   };
 
-  useEffect(() => {
+  useEffect(async () => {
     if (receiverid) {
-      fetchIndividualMessages(receiverid);
+      const res = await axios.get(`${ipurl}/getuser/${username.trim()}`);
+      const userID = res.data.user._id;
+      // fetchIndividualMessages(receiverid);
+      const privateRoom = [userID, receiverid].sort().join("-");
+      fetchfromSqlite(privateRoom);
     }
   }, [receiverid]);
 
   useEffect(() => {
     if (forumid) {
-      fetchForumMessages(forumid);
+      // fetchForumMessages(forumid);
+      fetchfromSqlite(topic);
     }
   }, [forumid]);
+  function generateUniqueId() {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let id = '';
+    for (let i = 0; i < 8; i++) {
+        const randomIndex = Math.floor(Math.random() * characters.length);
+        id += characters.charAt(randomIndex);
+    }
+    return id;
+}
+
 
   const handleSendMessage = async () => {
     try {
@@ -77,19 +106,34 @@ const ChatScreen = ({ route, navigation }) => {
 
       if (messageContent.trim() && userID) {
         const timestamp = new Date().toISOString();
-
+        // console.log("conetgis isb ",userID,receiverid,messageContent,username,timestamp);
+        let Room="";
+        if(receiverid){
+          Room = [userID, receiverid].sort().join("-");
+        }
+        else{
+          Room=topic;
+        }
         const newMessage = {
-          _id: String(messages.length + 1), // Generate a unique ID
+          _id: generateUniqueId(), // Generate a unique ID
           content: messageContent,
           username: username,
           createdAt: timestamp,
           isFailed: false,
+          roomid: Room// Room ID for group/forum message
         };
-        setMessageContent(""); // Clear input
-        // Check if it's a private message (receiverid is present)
+        //  console.log("new message iis ",newMessage);
+         
+        // Save message to SQLite
+        // addMessageToDatabase(newMessage);
+          await addDataToDb(newMessage);
+          // Clear message input
+          setMessageContent("");
+
         if (receiverid) {
           const privateRoom = [userID, receiverid].sort().join("-"); // Create unique room
-
+          console.log("in join room");
+          
           // Emit private message
           socketRef.current.emit("private message", {
             content: messageContent,
@@ -109,9 +153,10 @@ const ChatScreen = ({ route, navigation }) => {
           setMessages((prevMessages) => [newMessage, ...prevMessages]);
           setMessageContent(""); // Clear input
           // Save message to the API
-          await axios.post(`${ipurl}/api/messages/send`, privateMessage);
+          // await axios.post(`${ipurl}/api/messages/send`, privateMessage);
         } else {
           // Emit message to group chat
+          // console.log("before socketg ");
           socketRef.current.emit("private message", {
             content: messageContent,
             room: topic,
@@ -128,60 +173,68 @@ const ChatScreen = ({ route, navigation }) => {
           };
 
           // Append the new message to the messages state
-          setMessages((prevMessages) => [newMessage, ...prevMessages]);
+          if(messages){
+            setMessages((prevMessages) => [newMessage, ...prevMessages]);
+          }
+          else{
+            setMessages(newMessage);
+            console.log(messages);
+          }
           setMessageContent(""); // Clear input
-          await axios.post(`${ipurl}/forums/${forumid}/messages`, forumMessage);
+          // await axios.post(`${ipurl}/forums/${forumid}/messages`, forumMessage);
         }
 
         setMessageContent(""); // Clear input
       }
     } catch (error) {
       console.error("Error sending message: ", error);
-      setMessages((prevMessages) =>
-        prevMessages.map((msg) =>
-          msg.id === newMessage.id ? { ...msg, isFailed: true } : msg
-        )
-      );
+      if(messages){
+        setMessages((prevMessages) =>
+          prevMessages.map((msg) =>
+            msg.id === newMessage.id ? { ...msg, isFailed: true } : msg
+          )
+        );
+      }
     }
   };
 
   useEffect(() => {
     const setupSocket = async () => {
-      const res = await axios.get(`${ipurl}/getuser/${username.trim()}`);
-      const userID = res.data.user._id;
-
-      socketRef.current = io(ipurl, {
-        auth: {
-          userID: userID,
-          fetched_userName: username,
-        },
-      });
-
-      // Join private or group room based on receiverid
-      if (receiverid) {
-        const privateRoom = [userID, receiverid].sort().join("-");
-        socketRef.current.emit("join room", privateRoom);
-      } else {
-        socketRef.current.emit("join room", topic);
+      try {
+        const res = await axios.get(`${ipurl}/getuser/${username.trim()}`);
+        const userID = res.data.user._id;
+    
+        socketRef.current = io(ipurl, {
+          auth: {
+            userID: userID,
+            fetched_userName: username,
+          },
+        });
+    
+        // Join private or group room based on receiverid
+        if (receiverid) {
+          const privateRoom = [userID, receiverid].sort().join("-");
+          socketRef.current.emit("join room", privateRoom);
+        } else {
+          socketRef.current.emit("join room", topic);
+        }
+    
+        // Listen for incoming messages
+        socketRef.current.on("private message", async ({ content, from, createdAt }) => {
+          const resp = await axios.get(`${ipurl}/getuser/${from.trim()}`);
+          const from11 = resp.data.user.username;
+          setMessages((prevMessages) => [
+            { id: String(prevMessages.length + 1), _id: from, content, createdAt, username: from11 }, // New message at the start
+            ...prevMessages, // Existing messages
+          ]);
+        });
+      } catch (error) {
+        console.error('Error during socket setup:', error);
       }
-
-      // Listen for incoming messages
-      socketRef.current.on("private message", async ({ content, from, createdAt }) => {
-        // Ensure the incoming message is displayed in the correct format
-        const resp = await axios.get(`${ipurl}/getuser/${from.trim()}`);
-        const from11 = resp.data.user.username;
-        setMessages((prevMessages) => [
-          { id: String(prevMessages.length + 1), _id: from, content, createdAt, username: from11 }, // New message at the start
-          ...prevMessages, // Existing messages
-        ]);
-
-        // Optional: Log the incoming message for debugging
-        // console.log("New message received: ", { content, from });
-      });
     };
-
+  
     setupSocket();
-
+  
     // Cleanup on component unmount
     return () => {
       if (socketRef.current) {
@@ -189,6 +242,8 @@ const ChatScreen = ({ route, navigation }) => {
       }
     };
   }, [username, topic, receiverid]);
+  
+  
 
 
   // Render chat messages
@@ -202,39 +257,39 @@ const ChatScreen = ({ route, navigation }) => {
 
     return (
       <View>
-        {showDate && (
+        {showDate ? (
           <View style={styles.date}>
             <Text style={{ color: "darkgray" }}>
               {new Date(item.createdAt).toLocaleDateString()}
             </Text>
           </View>
-        )}
+        ) : null}
         <View
           style={[styles.messageContainer, isUserMessage ?
             styles.userMessageContainer : styles.otherMessageContainer]}>
-          {!isUserMessage && (
+          {!isUserMessage ? (
             <Text style={styles.userName}>{item.username}</Text>
-          )}
+          ):null}
           <View style={{ flexDirection: "row" }}>
-            {item.isFailed && (
+            {item.isFailed ? (
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <Text style={{ color: "white", marginRight: 2 }}>Resend</Text>
                 <TouchableOpacity onPress={() => handleSendMessage(item)}>
                   <MaterialCommunityIcons name="send-outline" size={24} color="white" />
                 </TouchableOpacity>
               </View>
-            )}
+            ):null}
             <View style={[styles.messageContent, isUserMessage ?
               styles.userMessageContent : styles.otherMessageContent]}>
               <Text style={{ color: "white" }} onPress={() => setSelectedMessageId(item._id)}>
                 {item.content}</Text>
             </View>
           </View>
-          {selectedMessageId === item._id && (
+          {selectedMessageId === item._id ? (
             <Text style={{ color: "white", backgroundColor: "#22283F" }}>
               {new Date(item.createdAt).toLocaleTimeString()}
             </Text>
-          )}
+          ):null}
         </View>
       </View>
     );
