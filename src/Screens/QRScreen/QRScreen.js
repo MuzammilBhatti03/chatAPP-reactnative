@@ -10,6 +10,8 @@ import { useNavigation } from "@react-navigation/native";
 
 const QRScreen = ({ username, }) => {
     const url = `appname://user/${username}`;
+    
+    
     const qrCodeRef = useRef(null); // No type annotation needed in JS
     const navigation = useNavigation();
 

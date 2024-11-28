@@ -1,21 +1,37 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  View, Text, FlatList, TextInput, SafeAreaView, TouchableOpacity, Image, Platform,
-  KeyboardAvoidingView, Alert, StatusBar
+  View,
+  Text,
+  FlatList,
+  TextInput,
+  SafeAreaView,
+  TouchableOpacity,
+  Image,
+  Platform,
+  KeyboardAvoidingView,
+  Alert,
+  StatusBar,
 } from "react-native";
 import { styles } from "./Style";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import io from "socket.io-client";
 import axios from "axios";
 import { ipurl } from "../../../constants/constant";
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { addDataToDb,  fetchDataFromDb,} from "../SQLiteScreen";
-import { v4 as uuidv4 } from 'uuid';
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { addDataToDb, fetchDataFromDb } from "../SQLiteScreen";
+import { v4 as uuidv4 } from "uuid";
+import { useNavigation } from "@react-navigation/native";
 
-
-const ChatScreen = ({ route, navigation }) => {
+const ChatScreen = ({ route }) => {
   const {
-    username, imgurl, topic, description, receiverid, recievename, forumid, userid,
+    username,
+    imgurl,
+    topic,
+    description,
+    receiverid,
+    recievename,
+    forumid,
+    userid,
   } = route.params;
 
   const [messages, setMessages] = useState([]);
@@ -24,19 +40,20 @@ const ChatScreen = ({ route, navigation }) => {
   const socketRef = useRef(); // Ref to store the socket connection
   const [selectedMessageId, setSelectedMessageId] = useState(null); // Track selected message for timestamp
   const [seenderid, setsenderid] = useState("");
+  const navigation = useNavigation();
 
   useEffect(() => {
     // getMessagesFromDatabase((fetchedMessages) => {
     //   setMessages(fetchedMessages.reverse());
     // });
   }, []);
-  const fetchfromSqlite=async (roomid)=>{
-    let res=await fetchDataFromDb(roomid);
+  const fetchfromSqlite = async (roomid) => {
+    let res = await fetchDataFromDb(roomid);
     // console.log("res is ",res);
-    if(res){
-      setMessages(res);
+    if (res) {
+      setMessages(res.reverse());
     }
-  }
+  };
   // Fetch forum messages (group or private) from the API
   const fetchForumMessages = async (forumID) => {
     try {
@@ -54,7 +71,9 @@ const ChatScreen = ({ route, navigation }) => {
       const resp = await axios.get(`${ipurl}/getuser/${username.trim()}`);
       const userID = resp.data.user._id;
       setsenderid(userID);
-      const res = await axios.get(`${ipurl}/api/messages/${userID}/${receiverid}`);
+      const res = await axios.get(
+        `${ipurl}/api/messages/${userID}/${receiverid}`
+      );
       const individualMessages = res.data.messages.reverse(); // Extract the messages from the response
       // console.log("individual message is ",individualMessages);
 
@@ -72,32 +91,36 @@ const ChatScreen = ({ route, navigation }) => {
     }
   };
 
-  useEffect(async () => {
-    if (receiverid) {
-      const res = await axios.get(`${ipurl}/getuser/${username.trim()}`);
-      const userID = res.data.user._id;
-      // fetchIndividualMessages(receiverid);
-      const privateRoom = [userID, receiverid].sort().join("-");
-      fetchfromSqlite(privateRoom);
-    }
-  }, [receiverid]);
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!receiverid) return; // Exit early if receiverid is null
+      try {
+        const res = await axios.get(`${ipurl}/getuser/${username.trim()}`);
+        const userID = res.data.user._id;
+        const privateRoom = [userID, receiverid].sort().join("-");
+        fetchfromSqlite(privateRoom);
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+
+    fetchData();
+  }, [receiverid, ipurl, username]);
 
   useEffect(() => {
-    if (forumid) {
-      // fetchForumMessages(forumid);
-      fetchfromSqlite(topic);
-    }
+    if (!forumid) return; // Exit early if forumid is null
+    fetchfromSqlite(topic);
   }, [forumid]);
   function generateUniqueId() {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let id = '';
+    const characters =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let id = "";
     for (let i = 0; i < 8; i++) {
-        const randomIndex = Math.floor(Math.random() * characters.length);
-        id += characters.charAt(randomIndex);
+      const randomIndex = Math.floor(Math.random() * characters.length);
+      id += characters.charAt(randomIndex);
     }
     return id;
-}
-
+  }
 
   const handleSendMessage = async () => {
     try {
@@ -107,12 +130,11 @@ const ChatScreen = ({ route, navigation }) => {
       if (messageContent.trim() && userID) {
         const timestamp = new Date().toISOString();
         // console.log("conetgis isb ",userID,receiverid,messageContent,username,timestamp);
-        let Room="";
-        if(receiverid){
+        let Room = "";
+        if (receiverid) {
           Room = [userID, receiverid].sort().join("-");
-        }
-        else{
-          Room=topic;
+        } else {
+          Room = topic;
         }
         const newMessage = {
           _id: generateUniqueId(), // Generate a unique ID
@@ -120,25 +142,25 @@ const ChatScreen = ({ route, navigation }) => {
           username: username,
           createdAt: timestamp,
           isFailed: false,
-          roomid: Room// Room ID for group/forum message
+          roomid: Room, // Room ID for group/forum message
         };
         //  console.log("new message iis ",newMessage);
-         
+
         // Save message to SQLite
         // addMessageToDatabase(newMessage);
-          await addDataToDb(newMessage);
-          // Clear message input
-          setMessageContent("");
+        await addDataToDb(newMessage);
+        // Clear message input
+        setMessageContent("");
 
         if (receiverid) {
           const privateRoom = [userID, receiverid].sort().join("-"); // Create unique room
-          console.log("in join room");
-          
+
           // Emit private message
           socketRef.current.emit("private message", {
             content: messageContent,
             room: privateRoom,
             createdAt: timestamp,
+            recipient: receiverid,
           });
 
           // Save private message to the database
@@ -173,10 +195,9 @@ const ChatScreen = ({ route, navigation }) => {
           };
 
           // Append the new message to the messages state
-          if(messages){
+          if (messages) {
             setMessages((prevMessages) => [newMessage, ...prevMessages]);
-          }
-          else{
+          } else {
             setMessages(newMessage);
             console.log(messages);
           }
@@ -188,7 +209,7 @@ const ChatScreen = ({ route, navigation }) => {
       }
     } catch (error) {
       console.error("Error sending message: ", error);
-      if(messages){
+      if (messages) {
         setMessages((prevMessages) =>
           prevMessages.map((msg) =>
             msg.id === newMessage.id ? { ...msg, isFailed: true } : msg
@@ -197,44 +218,76 @@ const ChatScreen = ({ route, navigation }) => {
       }
     }
   };
+  const setupSocket = async () => {
+    try {
+      const res = await axios.get(`${ipurl}/getuser/${username.trim()}`);
+      const userID = res.data.user._id;
 
-  useEffect(() => {
-    const setupSocket = async () => {
-      try {
-        const res = await axios.get(`${ipurl}/getuser/${username.trim()}`);
-        const userID = res.data.user._id;
-    
-        socketRef.current = io(ipurl, {
-          auth: {
-            userID: userID,
-            fetched_userName: username,
-          },
-        });
-    
-        // Join private or group room based on receiverid
-        if (receiverid) {
-          const privateRoom = [userID, receiverid].sort().join("-");
-          socketRef.current.emit("join room", privateRoom);
-        } else {
-          socketRef.current.emit("join room", topic);
-        }
-    
-        // Listen for incoming messages
-        socketRef.current.on("private message", async ({ content, from, createdAt }) => {
+      socketRef.current = io(ipurl, {
+        auth: {
+          userID: userID,
+          fetched_userName: username,
+        },
+      });
+
+      // Join private or group room based on receiverid
+      if (receiverid) {
+        const privateRoom = [userID, receiverid].sort().join("-");
+        console.log("in join room");
+        socketRef.current.emit("join room", privateRoom);
+      } else {
+        socketRef.current.emit("join room", topic);
+        console.log("in join room");
+      }
+
+      // Listen for incoming messages
+      socketRef.current.on(
+        "private message",
+        async ({ content, from, createdAt,room }) => {
+          console.log("in recieving message");
           const resp = await axios.get(`${ipurl}/getuser/${from.trim()}`);
           const from11 = resp.data.user.username;
           setMessages((prevMessages) => [
-            { id: String(prevMessages.length + 1), _id: from, content, createdAt, username: from11 }, // New message at the start
+            {
+              id: String(prevMessages.length + 1),
+              _id: from,
+              content,
+              createdAt,
+              username: from11,
+            }, // New message at the start
             ...prevMessages, // Existing messages
           ]);
-        });
-      } catch (error) {
-        console.error('Error during socket setup:', error);
-      }
-    };
-  
+
+          // let room = "";
+          // if (receiverid) {
+          //   room = [userID, receiverid].sort().join("-");
+          //   // console.log("rooom  is ",room);
+          // }
+          // if (forumid) {
+          //   room = topic;
+          // }
+          // console.log("frommm11 is ",from11);
+          
+          const newMessage = {
+            _id: generateUniqueId(), // Generate a unique ID
+            content: content,
+            username: await from11,
+            createdAt: createdAt,
+            isFailed: false,
+            roomid: room, // Room ID for group/forum message
+          };
+          // console.log("new message is ", newMessage);
+
+          await addDataToDb(newMessage);
+        }
+      );
+    } catch (error) {
+      console.error("Error during socket setup:", error);
+    }
+  };
+
+  useEffect(() => {
     setupSocket();
-  
     // Cleanup on component unmount
     return () => {
       if (socketRef.current) {
@@ -242,14 +295,11 @@ const ChatScreen = ({ route, navigation }) => {
       }
     };
   }, [username, topic, receiverid]);
-  
-  
-
 
   // Render chat messages
   const renderItem = ({ item, index }) => {
-
-    const isUserMessage = item.username === username || item.senderID === seenderid;
+    const isUserMessage =
+      item.username === username || item.senderID === seenderid;
     const nextItem = messages[index + 1];
     const showDate =
       new Date(item.createdAt).toDateString() !==
@@ -265,31 +315,50 @@ const ChatScreen = ({ route, navigation }) => {
           </View>
         ) : null}
         <View
-          style={[styles.messageContainer, isUserMessage ?
-            styles.userMessageContainer : styles.otherMessageContainer]}>
+          style={[
+            styles.messageContainer,
+            isUserMessage
+              ? styles.userMessageContainer
+              : styles.otherMessageContainer,
+          ]}
+        >
           {!isUserMessage ? (
             <Text style={styles.userName}>{item.username}</Text>
-          ):null}
+          ) : null}
           <View style={{ flexDirection: "row" }}>
             {item.isFailed ? (
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <Text style={{ color: "white", marginRight: 2 }}>Resend</Text>
                 <TouchableOpacity onPress={() => handleSendMessage(item)}>
-                  <MaterialCommunityIcons name="send-outline" size={24} color="white" />
+                  <MaterialCommunityIcons
+                    name="send-outline"
+                    size={24}
+                    color="white"
+                  />
                 </TouchableOpacity>
               </View>
-            ):null}
-            <View style={[styles.messageContent, isUserMessage ?
-              styles.userMessageContent : styles.otherMessageContent]}>
-              <Text style={{ color: "white" }} onPress={() => setSelectedMessageId(item._id)}>
-                {item.content}</Text>
+            ) : null}
+            <View
+              style={[
+                styles.messageContent,
+                isUserMessage
+                  ? styles.userMessageContent
+                  : styles.otherMessageContent,
+              ]}
+            >
+              <Text
+                style={{ color: "white" }}
+                onPress={() => setSelectedMessageId(item._id)}
+              >
+                {item.content}
+              </Text>
             </View>
           </View>
           {selectedMessageId === item._id ? (
             <Text style={{ color: "white", backgroundColor: "#22283F" }}>
               {new Date(item.createdAt).toLocaleTimeString()}
             </Text>
-          ):null}
+          ) : null}
         </View>
       </View>
     );
@@ -301,9 +370,7 @@ const ChatScreen = ({ route, navigation }) => {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <SafeAreaView style={styles.container}>
-        <StatusBar
-          backgroundColor='white'
-        />
+        <StatusBar backgroundColor="white" />
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={40} color="white" />
@@ -351,6 +418,5 @@ const ChatScreen = ({ route, navigation }) => {
     </KeyboardAvoidingView>
   );
 };
-
 
 export default ChatScreen;

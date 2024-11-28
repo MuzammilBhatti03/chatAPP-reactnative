@@ -1,1 +1,1 @@
-export const ipurl = 'http://192.168.0.105:4200';
+export const ipurl = 'http://192.168.0.110:4200';

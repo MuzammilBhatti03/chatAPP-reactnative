@@ -156,6 +156,10 @@ import * as SQLite from "expo-sqlite";
 let db;
 const initializeDB = async () => {
   db = await SQLite.openDatabaseAsync("newchatapp.db");
+  await db.execAsync(`
+    PRAGMA journal_mode = WAL;
+    CREATE TABLE IF NOT EXISTS messages (_id TEXT PRIMARY KEY NOT NULL, content TEXT, username TEXT, createdAt TEXT, isFailed INTEGER, roomid TEXT);
+    `);
   console.log(db);
 
 //   addBulkDataInDB();
@@ -208,7 +212,7 @@ export const fetchDataFromDb = async (roomid) => {
     const allRows = await db.getAllAsync(`SELECT * FROM messages WHERE roomid = ?`,
   [roomid]);
     for (const row of allRows) {
-      console.log(row._id, row.content);
+      // console.log(row._id, row.content);
     }
     return allRows;
   } catch (error) {

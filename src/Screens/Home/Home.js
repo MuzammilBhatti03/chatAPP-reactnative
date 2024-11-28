@@ -1,152 +1,4 @@
-// import React, { useState } from "react";
-// import {
-//   View,
-//   Text,
-//   FlatList,
-//   Image,
-//   TextInput,
-//   StyleSheet,
-//   SafeAreaView,
-//   TouchableOpacity,
-// } from "react-native";
-// import FontAwesome from "@expo/vector-icons/FontAwesome";
-// import { useNavigation } from '@react-navigation/native';
-
-// const data = [
-//   {
-//     id: "1",
-//     title: "Covid19",
-//     description: "Trends, precautionary measures and vaccine information",
-//     image: require("../assets/messagelogo.png"),
-//   },
-//   {
-//     id: "2",
-//     title: "Netflix Dark",
-//     description: "Lorem ipsum mollit non deserunt ullamco est sit aliqua dolor do",
-//     image: require("../assets/messagelogo.png"),
-//   },
-//   {
-//     id: "3",
-//     title: "IPL 2020",
-//     description: "Lorem ipsum mollit non deserunt ullamco est sit aliqua dolor do",
-//     image: require("../assets/messagelogo.png"),
-//   },
-//   {
-//     id: "4",
-//     title: "Black Lives Matter",
-//     description: "Lorem ipsum mollit non deserunt ullamco est sit aliqua dolor do",
-//     image: require("../assets/messagelogo.png"),
-//   },
-//   {
-//     id: "5",
-//     title: "Nolan’s Tenet",
-//     description: "Lorem ipsum mollit non deserunt ullamco est sit aliqua dolor do",
-//     image: require("../assets/messagelogo.png"),
-//   },
-// ];
-
-// const TopicsScreen = ({route}) => {
-//   const {user}=route.params;
-//   const [search, setSearch] = useState("");
-//   const navigation = useNavigation();
-
-//   const renderItem = ({ item }) => (
-//     <TouchableOpacity
-//       style={styles.itemContainer}
-//       onPress={() => navigation.navigate('Chat', {name:user, imgurl:item.image,topic: item.title, description: item.description })} // Pass both topic and description
-//     >
-//       <Image source={item.image} style={styles.itemImage} />
-//       <View style={styles.textContainer}>
-//         <Text style={styles.title}>{item.title}</Text>
-//         <Text style={styles.description}>{item.description}</Text>
-//       </View>
-//     </TouchableOpacity>
-//   );
-
-//   return (
-//     <SafeAreaView style={styles.container}>
-//       <View style={styles.searchContainer}>
-//         <FontAwesome
-//           name="search"
-//           size={16}
-//           color="gray"
-//           style={{ paddingRight: 10 }}
-//         />
-//         <TextInput
-//           style={{ ...styles.searchInput, flex: 0.9 }}
-//           placeholder="Search a topic"
-//           value={search}
-//           onChangeText={setSearch}
-//           placeholderTextColor={"gray"}
-//         />
-//       </View>
-
-//       <FlatList
-//         data={data}
-//         renderItem={renderItem}
-//         keyExtractor={(item) => item.id}
-//         style={styles.list}
-//       />
-//     </SafeAreaView>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     backgroundColor: "#22283F",
-//     color: "gray",
-//     paddingHorizontal: 20,
-//     // paddingTop: 20,
-//   },
-//   searchContainer: {
-//     flexDirection: "row",
-//     justifyContent: "center",
-//     alignItems: "center",
-//     backgroundColor: "#333B56",
-//     paddingVertical: 10,
-//     borderRadius: 10,
-//     marginVertical: 20,
-//   },
-//   searchInput: {
-//     color: "gray",
-
-//   },
-//   list: {
-//     flex: 1,
-//   },
-//   itemContainer: {
-//     flexDirection: "row",
-//     backgroundColor: "#333B56",
-//     padding: 15,
-//     paddingBottom: 25,
-//     borderRadius: 10,
-//     marginBottom: 15,
-//     alignItems: "center",
-//   },
-//   itemImage: {
-//     width: 50,
-//     height: 50,
-//     borderRadius: 25,
-//     marginRight: 10,
-//   },
-//   textContainer: {
-//     flex: 1,
-//   },
-//   title: {
-//     fontSize: 18,
-//     fontWeight: "bold",
-//     color: "#fff",
-//   },
-//   description: {
-//     fontSize: 14,
-//     color: "#bbb",
-//   },
-// });
-
-// export default TopicsScreen;
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -167,12 +19,22 @@ import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import axios from "axios";
 import { styles } from "./Style";
 import QRScreen from "../QRScreen/QRScreen";
+import { fetchDataFromDb } from "../SQLiteScreen";
 
 const socket = io(ipurl); // Adjust to your server
 
 // Bottom Tab Navigator
 const Tab = createBottomTabNavigator();
-
+function generateUniqueId() {
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let id = "";
+  for (let i = 0; i < 8; i++) {
+    const randomIndex = Math.floor(Math.random() * characters.length);
+    id += characters.charAt(randomIndex);
+  }
+  return id;
+}
 const TopicsScreen = ({ route }) => {
   const { userN, userarr } = route.params;
   const navigation = useNavigation();
@@ -299,37 +161,157 @@ const TopicsScreen = ({ route }) => {
         setLoading(false);
       }
     };
+    const socketRef = socket;
+    useEffect(() => {
+      const setupMessageListener = async () => {
+        // console.log("Setting up socket in UsersScreen...");
 
+        try {
+          // Fetch the userID for the current user
+          const res = await axios.get(`${ipurl}/getuser/${userN.trim()}`);
+          const userID = res.data.user._id;
+          // console.log("User id is ",userID);
+
+          // Initialize socket connection with userID authentication
+          socketRef.current = io(ipurl, {
+            auth: { userID }, // Pass userID for server-side validation
+            fetched_userName: userN,
+          });
+          // Check connection status
+          socketRef.current.on("connection", (socketRef) => {
+            console.log(`Socket connected: ${socketRef.current.userID}`);
+          });
+
+          socketRef.current.on("connect_error", (error) => {
+            console.error("Socket connection error:", error);
+          });
+
+          // Listen for private messages
+          socketRef.current.on(
+            "private message",
+            async ({ content, from, createdAt, room }) => {
+              console.log("Private message received:", { content, from, room });
+
+              // Fetch sender details
+              const resp = await axios.get(`${ipurl}/getuser/${from.trim()}`);
+              const fromUsername = resp.data.user.username;
+
+              // Construct the new message object
+              const newMessage = {
+                _id: generateUniqueId(),
+                content,
+                username: fromUsername,
+                createdAt,
+                roomid: room, // Room ID for group/forum messages
+              };
+
+              console.log("New message to save in DB:", newMessage);
+
+              // Save the message to the database
+              await addDataToDb(newMessage);
+            }
+          );
+
+          // Fetch connected users when requested (optional)
+          // socketRef.current.on("users", (users) => {
+          //   console.log("Connected users:", users);
+          // });
+
+          // Example: Emit a request for users (optional)
+          // socketRef.current.emit("fetch users");
+        } catch (error) {
+          console.error("Error setting up message listener:", error);
+        }
+      };
+
+      setupMessageListener();
+
+      // Cleanup socket connection on component unmount
+      // return () => {
+      //   if (socketRef.current) {
+      //     socketRef.current.disconnect();
+      //     console.log("Socket disconnected");
+      //   }
+      // };
+    }, []);
+
+    const [lastMessages, setLastMessages] = useState({}); // Store last messages for each user
+    const [lasttime, setlasttime] = useState({});
+    // Fetch last messages for all connected users
+    const fetchLastMessages = async () => {
+      try {
+        const lastMessagesMap = {};
+        const lasttimap = {};
+        for (const user of connectedUsers) {
+          const receiverid = user._id;
+          const res1 = await axios.get(`${ipurl}/getuser/${userN.trim()}`);
+          const privateRoom = [res1.data.user._id, receiverid].sort().join("-");
+          const res = await fetchDataFromDb(privateRoom);
+
+          if (res && res.length > 0) {
+            lastMessagesMap[receiverid] = res[res.length - 1].content; // Store last message content2
+            lasttimap[receiverid] = new Date(
+              res[res.length - 1].createdAt
+            ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false  });
+          } else {
+            lastMessagesMap[receiverid] = "No messages yet";
+            lasttimap[receiverid] = "";
+          }
+        }
+        setlasttime(lasttimap);
+        setLastMessages(lastMessagesMap); // Update state with all last messages
+      } catch (error) {
+        console.error("Error fetching last messages:", error);
+      }
+    };
+
+    useEffect(() => {
+      fetchLastMessages();
+    }, [connectedUsers]);
     return (
       <SafeAreaView style={styles.container}>
         <Text style={styles.title}>Connected Users</Text>
 
         {connectedUsers.length > 0 ? (
           <FlatList
-            data={connectedUsers}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.userItem}
-                onPress={() => {
-                  navigation.navigate("Chat", {
-                    username: userN,
-
-                    description: "send message to chat with him",
-                    topic: item.username,
-                    receiverid: item._id,
-                    recievename: item.username,
-                  });
+          data={connectedUsers.sort((a, b) => {
+            const lastMessageA = lasttime[a._id] ? new Date(lasttime[a._id]) : new Date(0); // Default to 0 if no message
+            const lastMessageB = lasttime[b._id] ? new Date(lasttime[b._id]) : new Date(0); // Default to 0 if no message
+            return lastMessageB - lastMessageA; // Sort descending: latest message first
+          })}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.userItem}
+              onPress={() => {
+                navigation.navigate("Chat", {
+                  username: userN,
+                  description: "send message to chat with him",
+                  topic: item.username,
+                  receiverid: item._id,
+                  recievename: item.username,
+                });
+              }}
+            >
+              <Text style={styles.userName}>{item.username}</Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  width: "100%",
                 }}
               >
-                <Text style={styles.userName}>{item.username}</Text>
-                <Text></Text>
-              </TouchableOpacity>
-            )}
-            keyExtractor={(item) => item._id}
-            style={styles.list}
-          />
+                <Text style={{ flex: 1, paddingRight: 10 }} numberOfLines={1}>
+                  {lastMessages[item._id] || "Loading..."}
+                </Text>
+                <Text>{lasttime[item._id]}</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+          keyExtractor={(item) => item._id}
+          style={styles.list}
+        />        
         ) : (
-          <Text style={{color:'white'}}>No users present</Text>
+          <Text style={{ color: "white" }}>No users present</Text>
         )}
 
         {/* Add Button */}
@@ -405,8 +387,11 @@ const TopicsScreen = ({ route }) => {
     >
       <Tab.Screen name="Forums" component={ForumsScreen} />
       <Tab.Screen name="Users" component={UsersScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} 
-      options={{headerShown:false}}/>
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ headerShown: false }}
+      />
     </Tab.Navigator>
   );
 };
