@@ -160,7 +160,7 @@ const initializeDB = async () => {
     PRAGMA journal_mode = WAL;
     CREATE TABLE IF NOT EXISTS messages (_id TEXT PRIMARY KEY NOT NULL, content TEXT, username TEXT, createdAt TEXT, isFailed INTEGER, roomid TEXT);
     `);
-  console.log(db);
+  // console.log(db);
 
 //   addBulkDataInDB();
 };
@@ -219,5 +219,21 @@ export const fetchDataFromDb = async (roomid) => {
     console.error("Error fetching data from DB:", error);
   }
 };
+
+export const fetchLastMessageForRoom = async (roomid) => {
+  await initializeDB(); // Ensure the database is initialized
+  try {
+    const lastMessage = await db.getAllAsync(
+      `SELECT * FROM messages WHERE roomid = ? ORDER BY createdAt DESC LIMIT 1`,
+      [roomid]
+    );
+
+    return lastMessage; // Return the last message (or null if no messages)
+  } catch (error) {
+    console.error("Error fetching last message for room:", error);
+    return null;
+  }
+};
+
 
 // initializeDB();

@@ -136,6 +136,10 @@ const Login = () => {
 
   const handleSubmit = async () => {
     try {
+      if(name.trim()===""){
+        Alert.alert("Add a username to Login");
+        return;
+      }
       // Step 1: Check if the user exists
       const res = await axios.get(`${ipurl}/getuser/${name.trim()}`);
 
