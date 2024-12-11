@@ -50,6 +50,7 @@ export const styles = StyleSheet.create({
       messageContent: {
         padding: 10,
         borderRadius: 25,
+        flexDirection:"row",
       },
       userMessageContent: {
         backgroundColor: "#4A90E2", // User message background color

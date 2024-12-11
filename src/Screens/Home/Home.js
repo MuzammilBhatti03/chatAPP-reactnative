@@ -516,7 +516,7 @@ const TopicsScreen = ({ route }) => {
         // Add the new listener for the inbox_update event
         socketRef.current.on(
           "inbox_update",
-          async ({ content, from, createdAt, room }) => {
+          async ({ content, from, createdAt, room,messageId }) => {
             // console.log("Inbox update received:", { content, from, room });
             const receiverid = room.split("-").find((id) => id !== from);
             // console.log("user id is ",userID,"  recieve ius ",receiverid);
@@ -535,6 +535,7 @@ const TopicsScreen = ({ route }) => {
             const newMessage = {
               _id: generateUniqueId(),
               content,
+              messageId,
               username: fromUsername,
               createdAt,
               roomid: room, // Room ID for group/forum messages
@@ -695,9 +696,8 @@ const TopicsScreen = ({ route }) => {
           Alert.alert("Error", "Could not fetch connected users.");
         }
       };
-
       fetchConnectedUsers();
-    }, []);
+    }, [userN]);
 
     const addUser = async () => {
       if (newUsername.trim() === userN) {
@@ -789,7 +789,7 @@ const TopicsScreen = ({ route }) => {
 
     useEffect(() => {
       fetchLastMessages();
-    }, [connectedUsers,lastMessages]);
+    }, [connectedUsers]);
     return (
       <SafeAreaView style={styles.container}>
         <Text style={styles.title}>Connected Users</Text>
