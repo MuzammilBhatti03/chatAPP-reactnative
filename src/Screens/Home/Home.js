@@ -413,7 +413,7 @@ import {
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import io from "socket.io-client";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { ipurl } from "../../../constants/constant";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import axios from "axios";
@@ -423,8 +423,8 @@ import {
   addDataToDb,
   fetchDataFromDb,
   fetchLastMessageForRoom,
+  markMessagesAsRead,
 } from "../SQLiteScreen";
-
 const socket = io(ipurl); // Adjust to your server
 
 // Bottom Tab Navigator
@@ -467,6 +467,24 @@ const TopicsScreen = ({ route }) => {
   useEffect(() => {
     fetchForumData(); // Fetch data when the component mounts
   }, []);
+  const increaseUnreadCount = (roomid) => {
+    setData((prevData) =>
+      prevData.map((topic) =>
+        topic.title === roomid
+          ? { ...topic, unreadCount: (topic.unreadCount || 0) + 1 }
+          : topic
+      )
+    );
+  };
+  const markUnreadCountToZero = (roomid) => {
+    setData((prevData) =>
+      prevData.map((topic) =>
+        topic.title === roomid
+          ? { ...topic, unreadCount: 0 }
+          : topic
+      )
+    );
+  };
   const socketRef = useRef(null);
   useEffect(() => {
     const setupMessageListener = async () => {
@@ -505,7 +523,7 @@ const TopicsScreen = ({ route }) => {
             const resp = await axios.get(`${ipurl}/getuser/${from.trim()}`);
             const fromUsername = resp.data.user.username;
             if (receiverid === userID) {
-              Alert.alert("message is ", content + " from " + fromUsername);
+              // Alert.alert("message is ", content + " from " + fromUsername);
             } else {
               if (from != userID) {
                 Alert.alert("message is ", content + " from " + room);
@@ -520,6 +538,7 @@ const TopicsScreen = ({ route }) => {
               username: fromUsername,
               createdAt,
               roomid: room, // Room ID for group/forum messages
+              isRead:0,
             };
 
             // console.log("New message to save in DB:", newMessage);
@@ -546,10 +565,18 @@ const TopicsScreen = ({ route }) => {
                     hour12: false,
                   }), // Update only this room's last message time
                 }));
+                setConnectedUsers((prevUsers) =>
+                  prevUsers.map((user) =>
+                    user._id === receiverId
+                      ? { ...user, unreadCount: (user.unreadCount || 0) + 1 }
+                      : user
+                  )
+                );
               }
             } else {
               if (from != userID) {
                 await addDataToDb(newMessage);
+                increaseUnreadCount(room);
               }
             }
           }
@@ -582,10 +609,14 @@ const TopicsScreen = ({ route }) => {
     <SafeAreaView style={styles.container}>
       <FlatList
         data={data}
-        renderItem={({ item }) => (
+        renderItem={({ item }) => {
+          const unreadCount = item.unreadCount || 0;
+        return(
           <TouchableOpacity
             style={styles.itemContainer}
-            onPress={() =>
+            onPress={async () =>{
+              await markMessagesAsRead(item.title);
+              markUnreadCountToZero(item.title);
               navigation.navigate("Chat", {
                 username: userN,
                 imgurl: item.image,
@@ -595,14 +626,29 @@ const TopicsScreen = ({ route }) => {
                 userid: "111111",
               })
             }
+            }
           >
             <Image source={{ uri: item.image }} style={styles.itemImage} />
             <View style={styles.textContainer}>
               <Text style={styles.title}>{item.title}</Text>
               <Text style={styles.description}>{item.description}</Text>
             </View>
+            {unreadCount > 0  && (
+                    <View
+                      style={{
+                        backgroundColor: "red",
+                        borderRadius: 12,
+                        paddingHorizontal: 8,
+                        paddingVertical: 2,
+                      }}
+                    >
+                      <Text style={{ color: "white", fontSize: 16 }}>
+                        {unreadCount}
+                      </Text>
+                    </View>
+                  )}
           </TouchableOpacity>
-        )}
+        )}}
         keyExtractor={(item) => item._id}
         style={styles.list}
       />
@@ -617,7 +663,24 @@ const TopicsScreen = ({ route }) => {
     const [loading, setLoading] = useState(false);
     const [connectedUsers, setConnectedUsers] = useState([]); // State to hold connected users
     // Replace with actual username or prop
-
+    // useFocusEffect(
+    //   React.useCallback(() => {
+    //     const fetchData = async () => {
+    //       try {
+    //         console.log("sdfghjkl");
+            
+    //         await fetchLastMessages();
+    //       } catch (error) {
+    //         console.error("Error fetching data:", error);
+    //       }
+    //     };
+    //     fetchData();
+    //     // Cleanup function (if necessary)
+    //     return () => {
+    //       console.log("Screen Unfocused");
+    //     };
+    //   }, []) // Add any dependencies here
+    // );
     useEffect(() => {
       const fetchConnectedUsers = async () => {
         try {
@@ -682,37 +745,51 @@ const TopicsScreen = ({ route }) => {
     const fetchLastMessages = async () => {
       try {
         const lastMessagesMap = {};
-        const lasttimap = {};
+        const lastTimeMap = {};
+        const unreadCountMap = {};
+    
         for (const user of connectedUsers) {
-          const receiverid = user._id;
+          const receiverId = user._id;
           const res1 = await axios.get(`${ipurl}/getuser/${userN.trim()}`);
-          const privateRoom = [res1.data.user._id, receiverid].sort().join("-");
-          const res = await fetchDataFromDb(privateRoom);
-
-          if (res && res.length > 0) {
-            lastMessagesMap[receiverid] = res[res.length - 1].content; // Store last message content2
-            lasttimap[receiverid] = new Date(
-              res[res.length - 1].createdAt
+          const privateRoom = [res1.data.user._id, receiverId].sort().join("-");
+          const messages = await fetchDataFromDb(privateRoom);
+    
+          if (messages && messages.length > 0) {
+            lastMessagesMap[receiverId] = messages[messages.length - 1].content;
+            lastTimeMap[receiverId] = new Date(
+              messages[messages.length - 1].createdAt
             ).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
               hour12: false,
             });
+            unreadCountMap[receiverId] = messages.filter(
+              (msg) => msg.isRead === 0 // Count only unread messages
+            ).length;
           } else {
-            lastMessagesMap[receiverid] = "No messages yet";
-            lasttimap[receiverid] = "";
+            lastMessagesMap[receiverId] = "No messages yet";
+            lastTimeMap[receiverId] = "";
+            unreadCountMap[receiverId] = 0;
           }
         }
-        setlasttime(lasttimap);
-        setLastMessages(lastMessagesMap); // Update state with all last messages
+    
+        setLastMessages(lastMessagesMap);
+        setlasttime(lastTimeMap);
+        setConnectedUsers((prevUsers) =>
+          prevUsers.map((user) => ({
+            ...user,
+            unreadCount: unreadCountMap[user._id] || 0,
+          }))
+        );
       } catch (error) {
         console.error("Error fetching last messages:", error);
       }
     };
+    
 
     useEffect(() => {
       fetchLastMessages();
-    }, [connectedUsers, lasttime]);
+    }, [connectedUsers,lastMessages]);
     return (
       <SafeAreaView style={styles.container}>
         <Text style={styles.title}>Connected Users</Text>
@@ -727,34 +804,65 @@ const TopicsScreen = ({ route }) => {
                 : new Date(0); // Default to 0 if no message
               return lastMessageB - lastMessageA; // Sort descending: latest message first
             })}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.userItem}
-                onPress={() => {
-                  navigation.navigate("Chat", {
-                    username: userN,
-                    description: "send message to chat with him",
-                    topic: item.username,
-                    receiverid: item._id,
-                    recievename: item.username,
-                  });
-                }}
-              >
-                <Text style={styles.userName}>{item.username}</Text>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    width: "100%",
+            renderItem={({ item }) => {
+              const unreadCount = item.unreadCount || 0;
+              return (
+                <TouchableOpacity
+                  style={styles.userItem}
+                  onPress={async () => {
+                    // const res1 = await axios.get(`${ipurl}/getuser/${userN.trim()}`);
+                    // const room=[res1.data.user._id, item._id].sort().join("-");
+                    // // console.log("room in home is ",room);
+                    // await markMessagesAsRead(room);
+                    navigation.navigate("Chat", {
+                      username: userN,
+                      description: "send message to chat with him",
+                      topic: item.username,
+                      receiverid: item._id,
+                      recievename: item.username,
+                    });
+                    // await fetchLastMessages();
+                    // const res1 = await axios.get(`${ipurl}/getuser/${userN.trim()}`);
+                    // const room=[res1.data.user._id, receiverId].sort().join("-");
+                    // await markMessagesAsRead(room);
                   }}
                 >
-                  <Text style={{ flex: 1, paddingRight: 10 }} numberOfLines={1}>
-                    {lastMessages[item._id] || "Loading..."}
-                  </Text>
-                  <Text>{lasttime[item._id]}</Text>
-                </View>
-              </TouchableOpacity>
-            )}
+                  <Text style={styles.userName}>{item.username}</Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      width: "100%",
+                    }}
+                  >
+                    <Text
+                      style={{ flex: 1, paddingRight: 10 }}
+                      numberOfLines={1}
+                    >
+                      {lastMessages[item._id] || "Loading..."}
+                    </Text>
+                    <Text>{lasttime[item._id]}</Text>
+                  </View>
+                  {unreadCount > 0  && (
+                    <View
+                      style={{
+                        position: "absolute",
+                        right: 10,
+                        top: 10,
+                        backgroundColor: "red",
+                        borderRadius: 12,
+                        paddingHorizontal: 8,
+                        paddingVertical: 2,
+                      }}
+                    >
+                      <Text style={{ color: "white", fontSize: 12 }}>
+                        {unreadCount}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            }}
             keyExtractor={(item) => item._id}
             style={styles.list}
           />

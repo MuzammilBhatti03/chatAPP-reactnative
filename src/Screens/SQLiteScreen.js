@@ -156,13 +156,27 @@ import * as SQLite from "expo-sqlite";
 let db;
 const initializeDB = async () => {
   db = await SQLite.openDatabaseAsync("newchatapp.db");
+  // await db.execAsync(`
+  //   PRAGMA journal_mode = WAL;
+  //   CREATE TABLE IF NOT EXISTS messages (_id TEXT PRIMARY KEY NOT NULL, content TEXT, username TEXT, createdAt TEXT, isFailed INTEGER, roomid TEXT);
+  //   `);
   await db.execAsync(`
     PRAGMA journal_mode = WAL;
-    CREATE TABLE IF NOT EXISTS messages (_id TEXT PRIMARY KEY NOT NULL, content TEXT, username TEXT, createdAt TEXT, isFailed INTEGER, roomid TEXT);
+      CREATE TABLE IF NOT EXISTS messages (
+        _id TEXT PRIMARY KEY NOT NULL, 
+        content TEXT, 
+        username TEXT, 
+        createdAt TEXT, 
+        isFailed INTEGER, 
+        roomid TEXT, 
+        isRead INTEGER DEFAULT 0
+      );
     `);
   // console.log(db);
-
-//   addBulkDataInDB();
+  // await db.execAsync(`
+  //   ALTER TABLE messages ADD COLUMN isRead INTEGER DEFAULT 0;
+  // `);
+  //   addBulkDataInDB();
 };
 
 const addBulkDataInDB = async () => {
@@ -170,47 +184,108 @@ const addBulkDataInDB = async () => {
   // Please note that `execAsync()` does not escape parameters and may lead to SQL injection.
   try {
     await db.execAsync(`
-    PRAGMA journal_mode = WAL;
-    CREATE TABLE IF NOT EXISTS messages (_id TEXT PRIMARY KEY NOT NULL, content TEXT, username TEXT, createdAt TEXT, isFailed INTEGER, roomid TEXT);
-    `);
-
+      CREATE TABLE IF NOT EXISTS messages (
+        _id TEXT PRIMARY KEY NOT NULL, 
+        content TEXT, 
+        username TEXT, 
+        createdAt TEXT, 
+        isFailed INTEGER, 
+        roomid TEXT, 
+        isRead INTEGER DEFAULT 0
+      `);
+    await db.execAsync(`
+        ALTER TABLE messages ADD COLUMN isRead INTEGER DEFAULT 0;
+      `);
     // fetchDataFromDb();
   } catch (error) {
     console.error("Error during DB operation:", error);
   }
 };
+export const markMessagesAsRead = async (roomid) => {
+  try {
+    await initializeDB();
+    console.log("Room ID for marking read is: ", roomid);
+
+    // Ensure the roomid is correctly passed
+    if (!roomid) {
+      throw new Error("Room ID is required");
+    }
+
+    // Execute the update query
+    const result = await db.runAsync(
+      "UPDATE messages SET isRead = 1 WHERE roomid = ? AND isRead = 0",
+      [roomid]
+    );
+
+    // Check the result of the query
+    if (result && result.changes > 0) {
+      console.log("Messages marked as read successfully:", result);
+    } else {
+      console.log("No messages were marked as read.");
+    }
+  } catch (error) {
+    console.error("Error marking messages as read:", error);
+  }
+};
+
+
+export const getUnreadCounts = async () => {
+  await initializeDB();
+  const result = await db.execAsync(`
+    SELECT roomid, COUNT(*) as unreadCount 
+    FROM messages 
+    WHERE isRead = 0 
+    GROUP BY roomid;
+  `);
+
+  const unreadCounts = {};
+  result.rows._array.forEach((row) => {
+    unreadCounts[row.roomid] = row.unreadCount;
+  });
+
+  return unreadCounts; // { roomid1: 3, roomid2: 5, ... }
+};
 
 export const addDataToDb = async (data) => {
-    try {
-      // Ensure the database is initialized before proceeding
-      await initializeDB();
-  
-      // SQL query to insert data into the messages table
-      const query = `
-        INSERT INTO messages (_id, content, username, createdAt, isFailed, roomid) 
-        VALUES (?, ?, ?, ?, ?, ?)
+  try {
+    // Ensure the database is initialized before proceeding
+    await initializeDB();
+
+    // SQL query to insert data into the messages table
+    const query = `
+        INSERT INTO messages (_id, content, username, createdAt, isFailed, roomid,isRead) 
+        VALUES (?, ?, ?, ?, ?, ?,?)
       `;
-  
-      // Destructure the fields from the input data object
-      const { _id, content, username, createdAt, isFailed, roomid } = data;
-  
-      // Execute the query with parameterized values
-      await db.runAsync(query, [_id, content, username, createdAt, isFailed, roomid]);
-  
-      console.log(`Data successfully added: ${JSON.stringify(data)}`);
-    } catch (error) {
-      console.error("Error adding data to DB:", error);
-      throw error; // Re-throw the error to let the caller handle it
-    }
-  };
-  
+
+    // Destructure the fields from the input data object
+    const { _id, content, username, createdAt, isFailed, roomid,isRead } = data;
+
+    // Execute the query with parameterized values
+    await db.runAsync(query, [
+      _id,
+      content,
+      username,
+      createdAt,
+      isFailed,
+      roomid,
+      isRead,
+    ]);
+
+    console.log(`Data successfully added: ${JSON.stringify(data)}`);
+  } catch (error) {
+    console.error("Error adding data to DB:", error);
+    throw error; // Re-throw the error to let the caller handle it
+  }
+};
 
 export const fetchDataFromDb = async (roomid) => {
-    await initializeDB();
+  await initializeDB();
   // `getAllAsync()` is useful when you want to get all results as an array of objects.
   try {
-    const allRows = await db.getAllAsync(`SELECT * FROM messages WHERE roomid = ?`,
-  [roomid]);
+    const allRows = await db.getAllAsync(
+      `SELECT * FROM messages WHERE roomid = ?`,
+      [roomid]
+    );
     for (const row of allRows) {
       // console.log(row._id, row.content);
     }
@@ -234,6 +309,5 @@ export const fetchLastMessageForRoom = async (roomid) => {
     return null;
   }
 };
-
 
 // initializeDB();

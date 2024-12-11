@@ -18,7 +18,7 @@ import io from "socket.io-client";
 import axios from "axios";
 import { ipurl } from "../../../constants/constant";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { addDataToDb, fetchDataFromDb } from "../SQLiteScreen";
+import { addDataToDb, fetchDataFromDb, markMessagesAsRead } from "../SQLiteScreen";
 import { v4 as uuidv4 } from "uuid";
 import { useNavigation } from "@react-navigation/native";
 
@@ -99,6 +99,7 @@ const ChatScreen = ({ route }) => {
         const userID = res.data.user._id;
         const privateRoom = [userID, receiverid].sort().join("-");
         fetchfromSqlite(privateRoom);
+        markMessagesAsRead(privateRoom);
       } catch (error) {
         console.error("Error fetching user data:", error);
       }
@@ -109,6 +110,7 @@ const ChatScreen = ({ route }) => {
 
   useEffect(() => {
     if (!forumid) return; // Exit early if forumid is null
+    
     fetchfromSqlite(topic);
   }, [forumid]);
   function generateUniqueId() {
@@ -143,6 +145,7 @@ const ChatScreen = ({ route }) => {
           createdAt: timestamp,
           isFailed: false,
           roomid: Room, // Room ID for group/forum message
+          isRead:1,
         };
         //  console.log("new message iis ",newMessage);
 
@@ -275,6 +278,7 @@ const ChatScreen = ({ route }) => {
             createdAt: createdAt,
             isFailed: false,
             roomid: room, // Room ID for group/forum message
+            isRead:1,
           };
           // console.log("new message is ", newMessage);
 
