@@ -6,8 +6,10 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#22283F",
     paddingHorizontal: 20,
+    
   },
   list: {
+    marginTop:10,
     flex: 1,
   },
   addButton: {

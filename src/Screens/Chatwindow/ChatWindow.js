@@ -82,6 +82,24 @@ const ChatScreen = ({ route }) => {
     }
   };
 
+  const saveIndividualMessageToDB = async (senderID, receiverID, content, _id, isFailed = false) => {
+    try {
+      const resp = await axios.post(`${ipurl}/api/messages/send`, {
+        _id, // Include the unique message ID
+        senderID,
+        receiverID,
+        content,
+        isFailed, // Default to false if not provided
+      });
+  
+      console.log("Message sent successfully:", resp.data);
+      return resp.data; // Optional: return response data
+    } catch (error) {
+      console.error("Error sending message:", error.response?.data || error.message);
+      throw error; // Handle the error as needed
+    }
+  };
+  
   const fetchIndividualMessages = async (receiverid) => {
     try {
       const resp = await axios.get(`${ipurl}/getuser/${username.trim()}`);
@@ -184,7 +202,14 @@ const ChatScreen = ({ route }) => {
             recipient: receiverid,
             messageId: newMessage._id,
           });
-
+          socketRef.current.emit("check-recipient", receiverid, (response) => {
+            if (response.isConnected) {
+              console.log("Recipient is connected.");
+            } else {
+              saveIndividualMessageToDB(userID,receiverid,messageContent,newMessage._id,true);
+              console.log("Recipient is not connected.");
+            }
+          });          
           // Save private message to the database
           const privateMessage = {
             senderID: userID,
